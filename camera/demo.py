@@ -50,7 +50,6 @@ class DemoApp:
         Returns the intrinsic matrix of the camera in the form of a 1D array
         [fx, fy, tx, ty]
         """
-        self.event.wait(5)
         intrinsic_coeffs = self.session.get_intrinsic_mat()
         intrinsic_coeffs = np.array([intrinsic_coeffs.fx,intrinsic_coeffs.fy,intrinsic_coeffs.tx,intrinsic_coeffs.ty])
         return intrinsic_coeffs
@@ -61,7 +60,8 @@ class DemoApp:
         depth = self.session.get_depth_frame()
         camera_pose = self.session.get_camera_pose()
         pose = np.array([camera_pose.qx,camera_pose.qy,camera_pose.qz,camera_pose.qw,camera_pose.tx,camera_pose.ty,camera_pose.tz])
-        return rgb, depth, pose
+        intrinsic_coeffs = self.get_intrinsic_coeff_from_array()
+        return rgb, depth, pose, intrinsic_coeffs
 	
     def start_processing_stream(self):
         while True:

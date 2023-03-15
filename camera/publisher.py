@@ -51,13 +51,13 @@ class ImagePublisher (object):
         self.bridge = CvBridge()
         self.image_publisher = rospy.Publisher(IMAGE_PUBLISHER_NAME, Image, queue_size = 1)
         self.depth_publisher = rospy.Publisher(DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size = 1)
-        self.intrinsic_publisher = rospy.Publisher(CAM_MATRIX_PUBLISHER_NAME, Float32MultiArray, queue_size = 1)
+        self.intrinsic_publisher = rospy.Publisher(CAM_MATRIX_PUBLISHER_NAME, numpy_msg(Floats), queue_size = 1)
 
     def publish_image_from_camera(self):
         rate = rospy.Rate(28)
         while True:
 
-            image, depth, pose = self.app.start_process_image()
+            image, depth, pose, intrinsics_data = self.app.start_process_image()
             #print("Depth shape: ", depth.shape, image.shape)
             image = np.moveaxis(image, [0], [1])[...,::-1,::-1]
             depth = np.moveaxis(depth, [0], [1])[...,::-1,::-1].astype(np.float64)
@@ -74,6 +74,7 @@ class ImagePublisher (object):
 
             self.image_publisher.publish(self.image_message)
             self.depth_publisher.publish(depth_data)
+            self.intrinsic_publisher.publish(intrinsics_data)
 
             # Stopping the camera
             if cv2.waitKey(1) == 27:
@@ -85,11 +86,6 @@ class ImagePublisher (object):
             rate.sleep()
 
         cv2.destroyAllWindows()
-
-    def publish_intrinsics_from_camera(self):
-        intrinsics = self.app.get_intrinsic_coeff_from_array()
-        intrinsics_data = convert_2d_array_to_multi_array(intrinsics, data_type=Float32MultiArray)
-        self.intrinsic_publisher.publish(intrinsics_data)
 
 
 if __name__ == '__main__':
