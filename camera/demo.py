@@ -59,7 +59,7 @@ class DemoApp:
         rgb = self.session.get_rgb_frame()
         depth = self.session.get_depth_frame()
         camera_pose = self.session.get_camera_pose()
-        pose = np.array([camera_pose.qx,camera_pose.qy,camera_pose.qz,camera_pose.qw,camera_pose.tx,camera_pose.ty,camera_pose.tz])
+        pose = np.array([camera_pose.qx,camera_pose.qy,camera_pose.qz,camera_pose.qw,camera_pose.tx,camera_pose.ty,camera_pose.tz], dtype=np.float32)
         intrinsic_coeffs = self.get_intrinsic_coeff_from_array()
         return rgb, depth, pose, intrinsic_coeffs
 	
