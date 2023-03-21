@@ -35,8 +35,8 @@ class Listner:
 
         try:
             rospy.init_node('Acting_node')
-        except rospy.exceptions.ROSException:
-            print('node already initialized')
+        except rospy.exceptions.ROSException as e:
+            print('node already initialized ', e)
         self.hello_robot.home()
         self._create_publishers()
         self.tensor_subscriber = TensorSubscriber()

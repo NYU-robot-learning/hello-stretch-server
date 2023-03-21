@@ -16,6 +16,7 @@ NODE_NAME = 'gopro_node'
 IMAGE_PUBLISHER_NAME = '/gopro_image'
 DEPTH_PUBLISHER_NAME = '/gopro_depth'
 CAM_MATRIX_PUBLISHER_NAME = '/iphone_k_matrix'
+CAM_POSE_PUBLISHER_NAME = '/iphone_pose'
 
 def convert_2d_array_to_multi_array(matrix, data_type=Float32MultiArray):
 	  # Create a Float64MultiArray object
@@ -52,6 +53,8 @@ class ImagePublisher (object):
         self.image_publisher = rospy.Publisher(IMAGE_PUBLISHER_NAME, Image, queue_size = 1)
         self.depth_publisher = rospy.Publisher(DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size = 1)
         self.intrinsic_publisher = rospy.Publisher(CAM_MATRIX_PUBLISHER_NAME, numpy_msg(Floats), queue_size = 1)
+        self.pose_publisher = rospy.Publisher(CAM_POSE_PUBLISHER_NAME, numpy_msg(Floats), queue_size = 1)
+
 
     def publish_image_from_camera(self):
         rate = rospy.Rate(28)
@@ -75,6 +78,7 @@ class ImagePublisher (object):
             self.image_publisher.publish(self.image_message)
             self.depth_publisher.publish(depth_data)
             self.intrinsic_publisher.publish(intrinsics_data)
+            self.pose_publisher.publish(pose)
 
             # Stopping the camera
             if cv2.waitKey(1) == 27:
