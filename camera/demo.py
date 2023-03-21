@@ -51,7 +51,7 @@ class DemoApp:
         [fx, fy, tx, ty]
         """
         intrinsic_coeffs = self.session.get_intrinsic_mat()
-        intrinsic_coeffs = np.array([intrinsic_coeffs.fx,intrinsic_coeffs.fy,intrinsic_coeffs.tx,intrinsic_coeffs.ty])
+        intrinsic_coeffs = np.array([intrinsic_coeffs.fx,intrinsic_coeffs.fy,intrinsic_coeffs.tx,intrinsic_coeffs.ty], dtype=np.float32)
         return intrinsic_coeffs
 
     def start_process_image(self):
