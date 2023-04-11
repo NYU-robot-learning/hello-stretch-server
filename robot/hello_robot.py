@@ -160,7 +160,7 @@ class HelloRobot:
                             joints['joint_arm_l1'] + 
                             joints['joint_arm_l0'])
         
-        # self.robot.lift.move_to(joints['joint_lift'])
+        self.robot.lift.move_to(joints['joint_lift'])
         
         #yaw, pitch, roll limits 
         self.robot.end_of_arm.move_to('wrist_yaw', self.clamp(joints['joint_wrist_yaw'], -0.4, 1.7))

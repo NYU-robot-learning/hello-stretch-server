@@ -8,8 +8,8 @@ import argparse
 from multiprocessing import Value
 import numpy as np
 
-PING_TOPIC_NAME = 'run_model_ping'
-STATE_TOPIC_NAME = 'run_model_state'
+PING_TOPIC_NAME = '/run_model_ping'
+STATE_TOPIC_NAME = '/run_model_state'
 
 
 parser = argparse.ArgumentParser()
@@ -28,6 +28,7 @@ params = vars(args)
 class Listner:
 
     def __init__(self, hello_robot = None):
+        print('starting robot listner')
         if hello_robot is None:
             self.hello_robot = HelloRobot()
         else:
@@ -51,9 +52,11 @@ class Listner:
         self.ping_publisher.publish(Int64(self.uid))
     
     def _publish_uid(self):
+        print('published uid', self.uid)
         self.ping_publisher.publish(Int64(self.uid))
 
     def _wait_for_data(self):
+        print('waiting for the data')
         wait_count = 0
         waiting = True
         while waiting:
