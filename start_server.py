@@ -7,7 +7,7 @@ import time
 
 def camera_process(app):
     camera_publisher = ImagePublisher(app)
-    camera_publisher.publish_intrinsics_from_camera()
+    #camera_publisher.publish_intrinsics_from_camera()
     camera_publisher.publish_image_from_camera()
 
 def robot_process(hello_robot):
