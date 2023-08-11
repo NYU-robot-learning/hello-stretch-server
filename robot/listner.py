@@ -26,8 +26,14 @@ params = vars(args)
 
 
 class Listner:
-
-    def __init__(self, hello_robot = None):
+    GRIPPER_SAFETY_LIMITS = (-1.0, 1.0)
+    TRANSLATION_SAFETY_LIMITS = (-0.05, 0.05)
+    def __init__(
+        self, 
+        hello_robot = None, 
+        gripper_safety_limits = GRIPPER_SAFETY_LIMITS, 
+        translation_safety_limits = TRANSLATION_SAFETY_LIMITS
+    ):
         print('starting robot listner')
         if hello_robot is None:
             self.hello_robot = HelloRobot()
@@ -43,6 +49,9 @@ class Listner:
         self.tensor_subscriber = TensorSubscriber()
         self.rate = rospy.Rate(5)
 
+        self.gripper_safety_limits = gripper_safety_limits
+        self.translation_safety_limits = translation_safety_limits
+    
     def _create_publishers(self):
         self.ping_publisher = rospy.Publisher(PING_TOPIC_NAME, Int64, queue_size=1)
         self.state_publisher = rospy.Publisher(STATE_TOPIC_NAME, Int64, queue_size=1)
@@ -85,9 +94,12 @@ class Listner:
         elif self.tensor_subscriber.home_params_offset==self.uid:
             self.hello_robot.initialize_home_params(*self.tensor_subscriber.home_params)
         else:
-            self.hello_robot.move_to_pose(self.tensor_subscriber.translation_tensor, 
-                                            self.tensor_subscriber.rotational_tensor, 
-                                            self.tensor_subscriber.gripper_tensor)
+            translation_tensor = np.clip(np.array(self.tensor_subscriber.translation_tensor), a_min=self.translation_safety_limits[0], a_max=self.translation_safety_limits[1])
+            translation_tensor = translation_tensor.tolist()
+            rotational_tensor = self.tensor_subscriber.rotational_tensor
+            gripper_tensor = np.clip(np.array(self.tensor_subscriber.gripper_tensor), a_min=self.gripper_safety_limits[0], a_max=self.gripper_safety_limits[1])
+            gripper_tensor = gripper_tensor.tolist()
+            self.hello_robot.move_to_pose(translation_tensor, rotational_tensor, gripper_tensor)
         self.rate.sleep()
 
         self._wait_till_ready()
