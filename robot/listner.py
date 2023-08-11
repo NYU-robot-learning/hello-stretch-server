@@ -51,7 +51,7 @@ class Listner:
 
         self.gripper_safety_limits = gripper_safety_limits
         self.translation_safety_limits = translation_safety_limits
-    
+
     def _create_publishers(self):
         self.ping_publisher = rospy.Publisher(PING_TOPIC_NAME, Int64, queue_size=1)
         self.state_publisher = rospy.Publisher(STATE_TOPIC_NAME, Int64, queue_size=1)
