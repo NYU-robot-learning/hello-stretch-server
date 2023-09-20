@@ -7,6 +7,7 @@ import pickle
 import argparse
 from multiprocessing import Value
 import numpy as np
+import time
 
 PING_TOPIC_NAME = "/run_model_ping"
 STATE_TOPIC_NAME = "/run_model_state"
@@ -38,10 +39,11 @@ class Listner:
     TRANSLATION_SAFETY_LIMITS = (-0.05, 0.05)
 
     def __init__(
-        self,
-        hello_robot=None,
-        gripper_safety_limits=GRIPPER_SAFETY_LIMITS,
-        translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
+        self, 
+        hello_robot = None, 
+        gripper_safety_limits = GRIPPER_SAFETY_LIMITS, 
+        translation_safety_limits = TRANSLATION_SAFETY_LIMITS,
+        stream_during_motion = True
     ):
         print("starting robot listner")
         if hello_robot is None:
@@ -60,13 +62,15 @@ class Listner:
 
         self.gripper_safety_limits = gripper_safety_limits
         self.translation_safety_limits = translation_safety_limits
+        self.stream_during_motion = stream_during_motion
 
     def _create_publishers(self):
         self.ping_publisher = rospy.Publisher(PING_TOPIC_NAME, Int64, queue_size=1)
         self.state_publisher = rospy.Publisher(STATE_TOPIC_NAME, Int64, queue_size=1)
 
     def _create_and_publish_uid(self):
-        self.uid = random.randint(0, 30000)
+        self._wait_for_robot_motion()
+        self.uid = random.randint(0,30000)
         self.ping_publisher.publish(Int64(self.uid))
 
     def _publish_uid(self):
@@ -95,6 +99,16 @@ class Listner:
 
             wait_count += 1
             self.rate.sleep()
+
+    def _wait_for_robot_motion(self):
+        # hello_robot robot.arm.wait_until_at_setpoint()
+        if self.stream_during_motion:
+            time.sleep(0.2)
+            return
+        # self.hello_robot.robot.arm.wait_until_at_setpoint()
+        # self.hello_robot.robot.lift.wait_until_at_setpoint()
+        # self.hello_robot.robot.base.wait_until_at_setpoint()
+        time.sleep(1.0)
 
     def _wait_till_ready(self):
         while self.hello_robot.robot.pimu.status["runstop_event"]:

@@ -19,6 +19,9 @@ from .utils import (
 )
 
 
+pick_place = [38.0, 15, 47] #15 looks wrong
+pouring = [33, 19, 53]
+
 OVERRIDE_STATES = {}
 
 
@@ -26,7 +29,7 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file="stretch_nobase_raised.urdf",
-        gripper_threshold=7.0,
+        gripper_threshold=10.0,
         stretch_gripper_max=42,
         stretch_gripper_min=0,
     ):
@@ -131,6 +134,7 @@ class HelloRobot:
         self.home_base = home_base
 
     def home(self):
+        self.not_grasped = True
         self.move_to_position(
             self.home_lift,
             self.home_arm,
@@ -237,22 +241,26 @@ class HelloRobot:
         self.robot.end_of_arm.move_to(
             "wrist_roll", self.clamp(joints["joint_wrist_roll"], -1.53, 1.53)
         )
-
+        print("Gripper state before update:", self.CURRENT_STATE)
+        print("Gripper instruction from the policy:", gripper[0])
         # gripper[0] value ranges from 0 to 1, 0 being closed and 1 being open. Below code maps the gripper value to the range of the gripper joint
         self.CURRENT_STATE = (
             gripper[0] * (self.STRETCH_GRIPPER_MAX - self.STRETCH_GRIPPER_MIN)
             + self.STRETCH_GRIPPER_MIN
         )
-
+        
+        print("Gripper state after update:", self.CURRENT_STATE)
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
         # code below is to map values below certain threshold to negative values to close the gripper much tighter
+        print("Gripper state after update:", self.GRIPPER_THRESHOLD)
         if self.CURRENT_STATE < self.GRIPPER_THRESHOLD:
             self.robot.end_of_arm.move_to("stretch_gripper", -25)
-
+        # else:
+        #     self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
         self.robot.push_command()
 
-        # sleeping to make sure all the joints are updated correctly (remove if not necessary)
-        time.sleep(0.7)
+        #sleeping to make sure all the joints are updated correctly (remove if not necessary)
+        # time.sleep(.7)
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         translation = [

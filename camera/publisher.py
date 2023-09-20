@@ -64,7 +64,7 @@ class ImagePublisher(object):
             image, depth, pose = self.app.start_process_image()
             # print("Depth shape: ", depth.shape, image.shape)
             image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
-            depth = np.moveaxis(depth, [0], [1])[..., ::-1, ::-1].astype(np.float64)
+            depth = np.ascontiguousarray(np.rot90(depth, -1)).astype(np.float64)
             # print("Depth shape 2: ", depth.shape, image.shape)
             # plot image
             # cv2.imshow('image', image)
