@@ -28,7 +28,7 @@ params = vars(args)
 
 if __name__ == "__main__":
     hello_robot = HelloRobot()
-    hello_robot.initialize_home_params(
+    hello_robot.set_home_position(
         params["lift"],
         params["arm"],
         params["base"],

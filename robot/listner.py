@@ -39,11 +39,11 @@ class Listner:
     TRANSLATION_SAFETY_LIMITS = (-0.05, 0.05)
 
     def __init__(
-        self, 
-        hello_robot = None, 
-        gripper_safety_limits = GRIPPER_SAFETY_LIMITS, 
-        translation_safety_limits = TRANSLATION_SAFETY_LIMITS,
-        stream_during_motion = True
+        self,
+        hello_robot=None,
+        gripper_safety_limits=GRIPPER_SAFETY_LIMITS,
+        translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
+        stream_during_motion=True,
     ):
         print("starting robot listner")
         if hello_robot is None:
@@ -70,7 +70,7 @@ class Listner:
 
     def _create_and_publish_uid(self):
         self._wait_for_robot_motion()
-        self.uid = random.randint(0,30000)
+        self.uid = random.randint(0, 30000)
         self.ping_publisher.publish(Int64(self.uid))
 
     def _publish_uid(self):
@@ -120,7 +120,7 @@ class Listner:
         if self.tensor_subscriber.home_data_offset == self.uid:
             self.hello_robot.home()
         elif self.tensor_subscriber.home_params_offset == self.uid:
-            self.hello_robot.initialize_home_params(*self.tensor_subscriber.home_params)
+            self.hello_robot.set_home_position(*self.tensor_subscriber.home_params)
         else:
             translation_tensor = np.clip(
                 np.array(self.tensor_subscriber.translation_tensor),

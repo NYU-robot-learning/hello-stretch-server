@@ -19,7 +19,7 @@ from .utils import (
 )
 
 
-pick_place = [38.0, 15, 47] #15 looks wrong
+pick_place = [38.0, 15, 47]  # 15 looks wrong
 pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
@@ -73,7 +73,7 @@ class HelloRobot:
 
         # Joint dictionary for Kinematics
         self.setup_kdl()
-        self.initialize_home_params()
+        self.set_home_position()
 
     def move_to_position(
         self,
@@ -115,23 +115,23 @@ class HelloRobot:
         self.robot.push_command()
         print("moving to position 4")
 
-    def initialize_home_params(
+    def set_home_position(
         self,
-        home_lift=0.43,
-        home_arm=0.02,
-        home_base=0.0,
-        home_wrist_yaw=0.0,
-        home_wrist_pitch=0.0,
-        home_wrist_roll=0.0,
-        home_gripper=1,
+        lift=0.43,
+        arm=0.02,
+        base=0.0,
+        wrist_yaw=0.0,
+        wrist_pitch=0.0,
+        wrist_roll=0.0,
+        gripper=1.0,
     ):
-        self.home_lift = home_lift
-        self.home_arm = home_arm
-        self.home_wrist_yaw = home_wrist_yaw
-        self.home_wrist_pitch = home_wrist_pitch
-        self.home_wrist_roll = home_wrist_roll
-        self.home_gripper = home_gripper
-        self.home_base = home_base
+        self.home_lift = lift
+        self.home_arm = arm
+        self.home_wrist_yaw = wrist_yaw
+        self.home_wrist_pitch = wrist_pitch
+        self.home_wrist_roll = wrist_roll
+        self.home_gripper = gripper
+        self.home_base = base
 
     def home(self):
         self.not_grasped = True
@@ -248,7 +248,7 @@ class HelloRobot:
             gripper[0] * (self.STRETCH_GRIPPER_MAX - self.STRETCH_GRIPPER_MIN)
             + self.STRETCH_GRIPPER_MIN
         )
-        
+
         print("Gripper state after update:", self.CURRENT_STATE)
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
         # code below is to map values below certain threshold to negative values to close the gripper much tighter
@@ -259,7 +259,7 @@ class HelloRobot:
         #     self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
         self.robot.push_command()
 
-        #sleeping to make sure all the joints are updated correctly (remove if not necessary)
+        # sleeping to make sure all the joints are updated correctly (remove if not necessary)
         # time.sleep(.7)
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
