@@ -1,5 +1,7 @@
 from .tensor_subscriber import TensorSubscriber
-from .hello_robot import HelloRobot
+
+# from .hello_robot import HelloRobot
+from .hello_robot_async import HelloRobot
 import rospy
 from std_msgs.msg import Int64
 import random
@@ -103,11 +105,13 @@ class Listner:
     def _wait_for_robot_motion(self):
         # hello_robot robot.arm.wait_until_at_setpoint()
         if self.stream_during_motion:
+            print("Waiting for robot motion, but streaming...")
             time.sleep(0.2)
             return
         # self.hello_robot.robot.arm.wait_until_at_setpoint()
         # self.hello_robot.robot.lift.wait_until_at_setpoint()
         # self.hello_robot.robot.base.wait_until_at_setpoint()
+        print("Waiting for robot motion...")
         time.sleep(1.0)
 
     def _wait_till_ready(self):

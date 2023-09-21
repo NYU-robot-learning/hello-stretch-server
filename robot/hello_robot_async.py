@@ -264,6 +264,7 @@ class HelloRobot:
         self._wrist_move_to_pos("wrist_roll", joints["joint_wrist_roll"])
         self._wrist_move_to_pos("stretch_gripper", gripper_pos)
         # sleeping to make sure all the joints are updated correctly (remove if not necessary)
+        print("Waiting for arm to move to setpoint")
         time.sleep(0.7)
         self.robot.arm.wait_until_at_setpoint()
         self.robot.lift.wait_until_at_setpoint()
