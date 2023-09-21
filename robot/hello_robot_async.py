@@ -11,26 +11,38 @@ from scipy.spatial.transform import Rotation as R
 from stretch_body.dynamixel_XL430 import DynamixelCommError
 from urdf_parser_py.urdf import URDF
 
-from .utils import (euler_to_quat, kdl_tree_from_urdf_model,
-                    urdf_inertial_to_kdl_rbi, urdf_joint_to_kdl_joint,
-                    urdf_pose_to_kdl_frame)
+from .utils import (
+    euler_to_quat,
+    kdl_tree_from_urdf_model,
+    urdf_inertial_to_kdl_rbi,
+    urdf_joint_to_kdl_joint,
+    urdf_pose_to_kdl_frame,
+)
 
 clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
 lerp = lambda x, a, b: x * (b - a) + a  # linear interp between a and b
+OVERRIDE_STATES = {}
 
 
 class HelloRobot:
     def __init__(
         self,
         urdf_file="stretch_nobase_raised.urdf",
+        gripper_threshold=10.0,
+        stretch_gripper_max=42.0,
+        stretch_gripper_min=0.0,
+        gripper_tight=-25.0,
+        velocity_deadzone=0.002,
+        correct_pitch_drift=True,
     ):
         self.robot = stretch_body.robot.Robot()
-        self.GRIPPER_MAX = 40.0
-        self.GRIPPER_MIN = 0.0
-        self.GRIPPER_THRESHOLD = 7.0
-        self.GRIPPER_TIGHT = -25.0
-        self.VELOCITY_DEADZONE = 0.002
+        self.GRIPPER_MAX = stretch_gripper_max
+        self.GRIPPER_MIN = stretch_gripper_min
+        self.GRIPPER_THRESHOLD = gripper_threshold
+        self.GRIPPER_TIGHT = gripper_tight
+        self.VELOCITY_DEADZONE = velocity_deadzone
 
+        self._correct_pitch_drift = correct_pitch_drift
         self.urdf_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "urdf", urdf_file
         )
@@ -208,7 +220,12 @@ class HelloRobot:
         self.state["joint_arm"] = self.robot.arm.status["pos"]
         self.state["joint_wrist_yaw"] = self._get_wrist_pos("wrist_yaw")
         self.state["joint_wrist_roll"] = self._get_wrist_pos("wrist_roll")
-        self.state["joint_wrist_pitch"] = self._get_wrist_pos("wrist_pitch")
+        if self._correct_pitch_drift:
+            self.state["joint_wrist_pitch"] = OVERRIDE_STATES.get(
+                "wrist_pitch", self._get_wrist_pos("wrist_pitch")
+            )
+        else:
+            self.state["joint_wrist_pitch"] = self._get_wrist_pos("wrist_pitch")
         self.state["joint_wrist_gripper"] = self._get_wrist_pos("stretch_gripper")
         self.state["timestamp"] = time.time()
 
@@ -242,6 +259,7 @@ class HelloRobot:
         self.robot.lift.push_command()
 
         self._wrist_move_to_pos("wrist_yaw", joints["joint_wrist_yaw"])
+        OVERRIDE_STATES["wrist_pitch"] = joints["joint_wrist_pitch"]
         self._wrist_move_to_pos("wrist_pitch", joints["joint_wrist_pitch"])
         self._wrist_move_to_pos("wrist_roll", joints["joint_wrist_roll"])
         self._wrist_move_to_pos("stretch_gripper", gripper_pos)
@@ -294,7 +312,6 @@ class HelloRobot:
         del_pose.p = del_trans
         if absolute:
             goal_pose_new = del_pose
-            print("Here")
         else:
             goal_pose_new = curr_pose * del_pose
 
