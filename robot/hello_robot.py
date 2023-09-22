@@ -60,7 +60,7 @@ class HelloRobot:
             print("node already initialized")
 
         self.robot = stretch_body.robot.Robot()
-        self.robot.startup()
+        self.startup()
 
         # Initializing the robot base position
         self.base_x = self.robot.base.status["x"]
@@ -74,6 +74,16 @@ class HelloRobot:
         # Joint dictionary for Kinematics
         self.setup_kdl()
         self.set_home_position()
+
+    def startup(self, home=False):
+        self.robot.startup()
+
+        self.robot.arm.motor.enable_sync_mode()
+        self.robot.base.left_wheel.enable_sync_mode()
+        self.robot.base.right_wheel.enable_sync_mode()
+        self.robot.lift.motor.enable_sync_mode()
+        if home:
+            self.home()
 
     def move_to_position(
         self,

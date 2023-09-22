@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 import PyKDL
+import rospy
 import stretch_body.robot
 from scipy.spatial.transform import Rotation as R
 from stretch_body.dynamixel_XL430 import DynamixelCommError
@@ -35,6 +36,10 @@ class HelloRobot:
         velocity_deadzone=0.002,
         correct_pitch_drift=True,
     ):
+        try:
+            rospy.init_node("hello_robot_node")
+        except:
+            print("node already initialized")
         self.robot = stretch_body.robot.Robot()
         self.GRIPPER_MAX = stretch_gripper_max
         self.GRIPPER_MIN = stretch_gripper_min
@@ -250,7 +255,10 @@ class HelloRobot:
         self.robot.base.translate_by(
             x_m=joints["joint_base"] - self.state["joint_base"]
         )
+        print(f"Move base by {joints['joint_base'] - self.state['joint_base']}")
         # TODO: check if we need the blocking set point arm movement behavior from cd1f3d1d
+        if "joint_arm" not in joints:
+            joints["joint_arm"] = sum(joints[f"joint_arm_l{i}"] for i in range(4))
         self.robot.arm.move_to(joints["joint_arm"])
         self.robot.lift.move_to(joints["joint_lift"])
 
@@ -266,9 +274,9 @@ class HelloRobot:
         # sleeping to make sure all the joints are updated correctly (remove if not necessary)
         print("Waiting for arm to move to setpoint")
         time.sleep(0.7)
-        self.robot.arm.wait_until_at_setpoint()
-        self.robot.lift.wait_until_at_setpoint()
-        self.robot.base.wait_until_at_setpoint()
+        self.robot.arm.wait_until_at_setpoint(timeout=1.0)
+        self.robot.lift.wait_until_at_setpoint(timeout=1.0)
+        self.robot.base.wait_until_at_setpoint(timeout=1.0)
 
         self._update_state()
 

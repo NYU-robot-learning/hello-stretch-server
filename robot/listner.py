@@ -1,7 +1,7 @@
 from .tensor_subscriber import TensorSubscriber
 
-# from .hello_robot import HelloRobot
-from .hello_robot_async import HelloRobot
+from .hello_robot import HelloRobot as SyncHelloRobot
+from .hello_robot_async import HelloRobot as AsyncHelloRobot
 import rospy
 from std_msgs.msg import Int64
 import random
@@ -46,12 +46,17 @@ class Listner:
         gripper_safety_limits=GRIPPER_SAFETY_LIMITS,
         translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
         stream_during_motion=True,
+        async_mode=False,
     ):
         print("starting robot listner")
         if hello_robot is None:
-            self.hello_robot = HelloRobot()
+            self.hello_robot = AsyncHelloRobot() if async_mode else SyncHelloRobot()
+            if async_mode:
+                self.hello_robot.startup(home=True)
+            print("Starting in synchronization mode: ", async_mode)
         else:
             self.hello_robot = hello_robot
+        
 
         try:
             rospy.init_node("Acting_node")
