@@ -111,7 +111,7 @@ class Listner:
         # hello_robot robot.arm.wait_until_at_setpoint()
         if self.stream_during_motion:
             print("Waiting for robot motion, but streaming...")
-            time.sleep(0.2)
+            time.sleep(8 / 10)
             return
         # self.hello_robot.robot.arm.wait_until_at_setpoint()
         # self.hello_robot.robot.lift.wait_until_at_setpoint()
@@ -131,6 +131,7 @@ class Listner:
         elif self.tensor_subscriber.home_params_offset == self.uid:
             self.hello_robot.set_home_position(*self.tensor_subscriber.home_params)
         else:
+            print("Received action to execute at ", time.time())
             translation_tensor = np.clip(
                 np.array(self.tensor_subscriber.translation_tensor),
                 a_min=self.translation_safety_limits[0],

@@ -2,20 +2,22 @@ import cv2
 import rospy
 
 import numpy as np
+import time
+from imgcat import imgcat
 
 from sensor_msgs.msg import Image
 from rospy.numpy_msg import numpy_msg
 from cv_bridge import CvBridge, CvBridgeError
 from rospy_tutorials.msg import Floats
-from std_msgs.msg import Float32MultiArray, MultiArrayDimension
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
 
 # from numpy_ros import converts_to_message, to_message
-import sys
 from .demo import R3DApp
 
 NODE_NAME = "gopro_node"
 IMAGE_PUBLISHER_NAME = "/gopro_image"
 DEPTH_PUBLISHER_NAME = "/gopro_depth"
+SEQ_PUBLISHER_NAME = "/gopro_seq"
 
 
 # @converts_to_message(Float32MultiArray))
@@ -57,17 +59,19 @@ class ImagePublisher(object):
         self.depth_publisher = rospy.Publisher(
             DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
         )
+        self.seq_publisher = rospy.Publisher(
+            SEQ_PUBLISHER_NAME, Int32, queue_size=1
+        )
+        self._seq = 0
 
     def publish_image_from_camera(self):
-        rate = rospy.Rate(28)
+        rate = rospy.Rate(10)
         while True:
             image, depth, pose = self.app.start_process_image()
-            # print("Depth shape: ", depth.shape, image.shape)
             image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
+            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
             depth = np.ascontiguousarray(np.rot90(depth, -1)).astype(np.float64)
-            # print("Depth shape 2: ", depth.shape, image.shape)
-            # plot image
-            # cv2.imshow('image', image)
+            
             # Creating a CvBridge and publishing the data to the rostopic
             try:
                 self.image_message = self.bridge.cv2_to_imgmsg(image, "bgr8")
@@ -77,6 +81,8 @@ class ImagePublisher(object):
             depth_data = convert_numpy_array_to_float32_multi_array(depth)
             self.image_publisher.publish(self.image_message)
             self.depth_publisher.publish(depth_data)
+            self.seq_publisher.publish(Int32(self._seq))
+            self._seq += 1
 
             # Stopping the camera
             if cv2.waitKey(1) == 27:
