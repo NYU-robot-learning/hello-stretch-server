@@ -3,13 +3,14 @@ import rospy
 
 import numpy as np
 import time
-from imgcat import imgcat
 
 from sensor_msgs.msg import Image
 from rospy.numpy_msg import numpy_msg
 from cv_bridge import CvBridge, CvBridgeError
 from rospy_tutorials.msg import Floats
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
+from geometry_msgs.msg import Pose, Point, Quaternion
+
 
 # from numpy_ros import converts_to_message, to_message
 from .demo import R3DApp
@@ -17,6 +18,7 @@ from .demo import R3DApp
 NODE_NAME = "gopro_node"
 IMAGE_PUBLISHER_NAME = "/gopro_image"
 DEPTH_PUBLISHER_NAME = "/gopro_depth"
+POSE_PUBLISHER_NAME = "/gopro_pose"
 SEQ_PUBLISHER_NAME = "/gopro_seq"
 
 
@@ -41,6 +43,12 @@ def convert_numpy_array_to_float32_multi_array(matrix):
 
     return data_to_send
 
+def convert_numpy_array_to_pose(pose_array):
+    pose_msg = Pose()
+    pose_msg.position = Point(*pose_array[4:])
+    pose_msg.orientation = Quaternion(*pose_array[:4])
+    return pose_msg
+
 
 class ImagePublisher(object):
     def __init__(self, app):
@@ -62,6 +70,9 @@ class ImagePublisher(object):
         self.seq_publisher = rospy.Publisher(
             SEQ_PUBLISHER_NAME, Int32, queue_size=1
         )
+        self.pose_publisher = rospy.Publisher(
+            POSE_PUBLISHER_NAME, Pose, queue_size=1
+        )
         self._seq = 0
 
     def publish_image_from_camera(self):
@@ -81,6 +92,7 @@ class ImagePublisher(object):
             depth_data = convert_numpy_array_to_float32_multi_array(depth)
             self.image_publisher.publish(self.image_message)
             self.depth_publisher.publish(depth_data)
+            self.pose_publisher.publish(convert_numpy_array_to_pose(pose))  
             self.seq_publisher.publish(Int32(self._seq))
             self._seq += 1
 

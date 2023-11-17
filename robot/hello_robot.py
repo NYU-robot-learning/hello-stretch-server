@@ -277,12 +277,11 @@ class HelloRobot:
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
         # code below is to map values below certain threshold to negative values to close the gripper much tighter
         print("Gripper state after update:", self.GRIPPER_THRESHOLD)
-
-        if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
-            self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT)
-            self._has_gripped = True
-        else:
-            self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
+        # if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
+        #     self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT)
+        #     self._has_gripped = True
+        # else:
+        #     self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
         self.robot.push_command()
 
         # sleeping to make sure all the joints are updated correctly (remove if not necessary)
