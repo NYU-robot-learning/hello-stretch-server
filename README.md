@@ -5,26 +5,17 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  
-
-  <h3 align="center">Hello Stretch Server</h3>
-
+  <h2 align="center">Hello Stretch Server</h3>
   <p align="center">
     Code to start the camera stream publisher and robot controller. The code is useful for record3d based camera streaming and controller but can be adapted for other use cases.
   </p>
 </div>
 
-
-
-
-
-
 <!-- ABOUT THE PROJECT -->
 ## Instruction for Installation and Running
 
-
-
-First clone the repository to your hello robot. Using requirements.txt, you can install the required packages.
+First clone the repository to your hello robot. Using `requirements.txt`, you can install the required packages.
+**Important:** Make sure the requirements are installed in the root python environment (the same environment where `stretch_body` package is installed) on your stretch robot. Otherwise, this code will not work.
 
 To run the server, follow the following steps:
 * Make sure your robot is joint-calibrated by running 
@@ -36,4 +27,3 @@ To run the server, follow the following steps:
   ```sh
   python3 start_server.py
   ```
-

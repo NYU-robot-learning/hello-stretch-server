@@ -1,6 +1,5 @@
 import numpy as np
 import rospy
-
 from std_msgs.msg import Float64MultiArray
 
 TRANSLATIONAL_PUBLISHER_TOPIC = "/translation_tensor"

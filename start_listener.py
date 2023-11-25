@@ -1,6 +1,6 @@
-from robot import listener, HelloRobot
-
 import argparse
+
+from robot import HelloRobot, listener
 
 PING_TOPIC_NAME = "run_model_ping"
 

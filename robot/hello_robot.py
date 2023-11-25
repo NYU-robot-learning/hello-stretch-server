@@ -1,21 +1,22 @@
-import stretch_body.robot
+import logging
+import math
+import os
+import time
+from typing import Union
+
 import numpy as np
 import PyKDL
 import rospy
-
-from typing import Union
-from urdf_parser_py.urdf import URDF
+import stretch_body.robot
 from scipy.spatial.transform import Rotation as R
-import math
-import time
-import os
-import logging
+from urdf_parser_py.urdf import URDF
+
 from .utils import (
     euler_to_quat,
+    kdl_tree_from_urdf_model,
+    urdf_inertial_to_kdl_rbi,
     urdf_joint_to_kdl_joint,
     urdf_pose_to_kdl_frame,
-    urdf_inertial_to_kdl_rbi,
-    kdl_tree_from_urdf_model,
 )
 
 logging.basicConfig(
@@ -37,20 +38,24 @@ class HelloRobot:
     -----------
     urdf_file: str
         The path to the urdf file of the robot. Default is "./urdf/stretch_nobase_raised.urdf"
-    stretch_gripper_max: int
+    stretch_gripper_max: int | float
         The maximum opening on the gripper, using stepper motor units. The value should come
         out of Stretch robot calibration, and on our robot it is 47.
-    stretch_gripper_min: int
+    stretch_gripper_min: int | float
         The minimum opening on the gripper, using stepper motor units. The value should come
         out of Stretch robot calibration, and on our robot it is 0. On a calibrated robot it
         should be around 0 (fingertips barely touching).
-    gripper_threshold: int
+    gripper_threshold: int | float
         The gripper threshold at which the robot should close its gripper. Should be a value
         between [stretch_gripper_min, stretch_gripper_max].
+    stretch_gripper_tight: int | float
+        The value (in stepper units) to which the gripper should close when it is below the
+        gripper_threshold. This is used to close the gripper tighter when the robot is
+        grasping an object. Should be a value below stretch_gripper_min generally.
     sticky_gripper: bool
         If True, the gripper will stay closed after it has gripped an object. If False, the
         gripper may open after it has gripped an object.
-    gripper_threshold_post_grasp: int
+    gripper_threshold_post_grasp: int | float
         The gripper threshold at which the robot should open its gripper after it has grasped
         an object. Should be a value between [stretch_gripper_min, stretch_gripper_max].
     """
@@ -95,7 +100,7 @@ class HelloRobot:
         try:
             rospy.init_node("hello_robot_node")
         except:
-            logging.warn("Node already initialized")
+            logging.warning("Node already initialized")
 
         self.robot = stretch_body.robot.Robot()
         self.startup()

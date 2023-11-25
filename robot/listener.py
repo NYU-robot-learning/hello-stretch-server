@@ -1,14 +1,15 @@
-from .tensor_subscriber import TensorSubscriber
+import argparse
+import logging
+import random
+import time
+from typing import Optional
 
-from .hello_robot import HelloRobot
+import numpy as np
 import rospy
 from std_msgs.msg import Int64
-import random
-import argparse
-from multiprocessing import Value
-import numpy as np
-import time
-import logging
+
+from .hello_robot import HelloRobot
+from .tensor_subscriber import TensorSubscriber
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -45,7 +46,7 @@ class Listener:
 
     def __init__(
         self,
-        hello_robot=None,
+        hello_robot: Optional[HelloRobot] = None,
         gripper_safety_limits=GRIPPER_SAFETY_LIMITS,
         translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
         stream_during_motion=True,
@@ -59,7 +60,7 @@ class Listener:
         try:
             rospy.init_node("Acting_node")
         except rospy.exceptions.ROSException:
-            logging.warn("Node already initialized.")
+            logging.warning("Node already initialized.")
         self.hello_robot.home()
         self._create_publishers()
         self.tensor_subscriber = TensorSubscriber()

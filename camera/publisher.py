@@ -1,20 +1,20 @@
-import cv2
-import rospy
-
-import numpy as np
-import time
-from imgcat import imgcat
 import logging
+import time
+
+import cv2
+import numpy as np
+import rospy
+from imgcat import imgcat
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-from sensor_msgs.msg import Image
-from rospy.numpy_msg import numpy_msg
 from cv_bridge import CvBridge, CvBridgeError
+from rospy.numpy_msg import numpy_msg
 from rospy_tutorials.msg import Floats
-from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
+from sensor_msgs.msg import Image
+from std_msgs.msg import Float32MultiArray, Int32, MultiArrayDimension
 
 # from numpy_ros import converts_to_message, to_message
 from .demo import R3DApp
@@ -55,8 +55,8 @@ class ImagePublisher(object):
         try:
             rospy.init_node(NODE_NAME)
         except rospy.exceptions.ROSException as e:
-            logging.warn(e)
-            logging.warn("ROS node already initialized")
+            logging.warning(e)
+            logging.warning("ROS node already initialized")
         self.bridge = CvBridge()
         self.image_publisher = rospy.Publisher(
             IMAGE_PUBLISHER_NAME, Image, queue_size=1
@@ -79,7 +79,7 @@ class ImagePublisher(object):
             try:
                 self.image_message = self.bridge.cv2_to_imgmsg(image, "bgr8")
             except CvBridgeError as e:
-                logging.warn(e)
+                logging.warning(e)
 
             depth_data = convert_numpy_array_to_float32_multi_array(depth)
             self.image_publisher.publish(self.image_message)

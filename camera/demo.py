@@ -1,8 +1,9 @@
+import logging
+from threading import Event
+
+import cv2
 import numpy as np
 from record3d import Record3DStream
-import cv2
-from threading import Event
-import logging
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -27,7 +28,7 @@ class R3DApp:
         self.stream_stopped = True
         logging.info("Stream stopped")
 
-    def connect_to_device(self, dev_idx):
+    def connect_to_device(self, dev_idx: int = 0):
         logging.info("Searching for devices")
         devs = Record3DStream.get_connected_devices()
         logging.info("{} device(s) found".format(len(devs)))
