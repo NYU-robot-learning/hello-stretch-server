@@ -1,5 +1,4 @@
 import logging
-import time
 
 import cv2
 import numpy as np
@@ -12,11 +11,9 @@ logging.basicConfig(
 
 from cv_bridge import CvBridge, CvBridgeError
 from rospy.numpy_msg import numpy_msg
-from rospy_tutorials.msg import Floats
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float32MultiArray, Int32, MultiArrayDimension
 
-# from numpy_ros import converts_to_message, to_message
 from .demo import R3DApp
 
 NODE_NAME = "gopro_node"
@@ -48,9 +45,10 @@ def convert_numpy_array_to_float32_multi_array(matrix):
 
 
 class ImagePublisher(object):
-    def __init__(self, app):
+    def __init__(self, app: R3DApp, rate: int = 10):
         # Initializing camera
         self.app = app
+        self.rate = rate
         # Initializing ROS node
         try:
             rospy.init_node(NODE_NAME)
@@ -68,7 +66,7 @@ class ImagePublisher(object):
         self._seq = 0
 
     def publish_image_from_camera(self):
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(self.rate)
         while True:
             image, depth, pose = self.app.start_process_image()
             image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
@@ -102,6 +100,6 @@ class ImagePublisher(object):
 if __name__ == "__main__":
     app = R3DApp()
     app.connect_to_device(dev_idx=0)
-    logging.info("connected")
+    logging.info("Connected")
     camera_publisher = ImagePublisher(app)
     camera_publisher.publish_image_from_camera()
