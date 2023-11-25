@@ -29,12 +29,12 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file="stretch_nobase_raised.urdf",
-        gripper_threshold=18, #17
-        stretch_gripper_max=47,
+        gripper_threshold=7, # unused
+        stretch_gripper_max=51,
         stretch_gripper_min=0,
-        stretch_gripper_tight=-35,
-        sticky_gripper=True,
-        gripper_threshold_post_grasp=14.5,
+        stretch_gripper_tight=[-10, -25],
+        sticky_gripper=False,
+        gripper_threshold_post_grasp_list=[0.65*51, 0.3*51, 0.6*51, 0.8*51],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -42,12 +42,13 @@ class HelloRobot:
         self._has_gripped = False
         self._sticky_gripper = sticky_gripper
         self.urdf_file = urdf_file
+        self.threshold_count = 0
 
         self.urdf_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "urdf", self.urdf_file
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
-        self.GRIPPER_THRESHOLD_POST_GRASP = gripper_threshold_post_grasp or gripper_threshold
+        self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list
 
         # Initializing ROS node
         self.joint_list = [
@@ -94,7 +95,7 @@ class HelloRobot:
 
     def move_to_position(
         self,
-        lift_pos=0.5,
+        lift_pos=0.7,
         arm_pos=0.02,
         base_trans=0.0,
         wrist_yaw=0.0,
@@ -134,7 +135,7 @@ class HelloRobot:
 
     def set_home_position(
         self,
-        lift=0.4,
+        lift=0.7,
         arm=0.02,
         base=0.0,
         wrist_yaw=0.0,
@@ -153,6 +154,7 @@ class HelloRobot:
     def home(self):
         self.not_grasped = True
         self._has_gripped = False
+        self.threshold_count = 0
         self.move_to_position(
             self.home_lift,
             self.home_arm,
@@ -228,7 +230,8 @@ class HelloRobot:
         ]["pos"]
 
     def get_threshold(self):
-        return self.GRIPPER_THRESHOLD if not self._has_gripped else self.GRIPPER_THRESHOLD_POST_GRASP
+        self.threshold_count = min(self.threshold_count, len(self.GRIPPER_THRESHOLD_POST_GRASP_LIST) - 1)
+        return self.GRIPPER_THRESHOLD_POST_GRASP_LIST[self.threshold_count]
 
     # following function is used to move the robot to a desired joint configuration
     def move_to_joints(self, joints, gripper):
@@ -279,10 +282,15 @@ class HelloRobot:
         print("Gripper state after update:", self.GRIPPER_THRESHOLD)
 
         if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
-            self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT)
+            self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT[self.threshold_count//2])
+            if not self._has_gripped:
+                self.threshold_count += 1
             self._has_gripped = True
         else:
             self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
+            if self._has_gripped:
+                self.threshold_count += 1
+            self._has_gripped = False
         self.robot.push_command()
 
         # sleeping to make sure all the joints are updated correctly (remove if not necessary)
