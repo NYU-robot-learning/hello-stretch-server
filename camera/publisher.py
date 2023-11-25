@@ -4,6 +4,11 @@ import rospy
 import numpy as np
 import time
 from imgcat import imgcat
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 from sensor_msgs.msg import Image
 from rospy.numpy_msg import numpy_msg
@@ -50,8 +55,8 @@ class ImagePublisher(object):
         try:
             rospy.init_node(NODE_NAME)
         except rospy.exceptions.ROSException as e:
-            print(e)
-            print("ROS node already initialized")
+            logging.warn(e)
+            logging.warn("ROS node already initialized")
         self.bridge = CvBridge()
         self.image_publisher = rospy.Publisher(
             IMAGE_PUBLISHER_NAME, Image, queue_size=1
@@ -59,9 +64,7 @@ class ImagePublisher(object):
         self.depth_publisher = rospy.Publisher(
             DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
         )
-        self.seq_publisher = rospy.Publisher(
-            SEQ_PUBLISHER_NAME, Int32, queue_size=1
-        )
+        self.seq_publisher = rospy.Publisher(SEQ_PUBLISHER_NAME, Int32, queue_size=1)
         self._seq = 0
 
     def publish_image_from_camera(self):
@@ -71,12 +74,12 @@ class ImagePublisher(object):
             image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
             image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
             depth = np.ascontiguousarray(np.rot90(depth, -1)).astype(np.float64)
-            
+
             # Creating a CvBridge and publishing the data to the rostopic
             try:
                 self.image_message = self.bridge.cv2_to_imgmsg(image, "bgr8")
             except CvBridgeError as e:
-                print(e)
+                logging.warn(e)
 
             depth_data = convert_numpy_array_to_float32_multi_array(depth)
             self.image_publisher.publish(self.image_message)
@@ -88,7 +91,7 @@ class ImagePublisher(object):
             if cv2.waitKey(1) == 27:
                 break
             if self.app.stream_stopped:
-                print("breaking")
+                logging.info("Breaking")
                 break
 
             rate.sleep()
@@ -99,8 +102,6 @@ class ImagePublisher(object):
 if __name__ == "__main__":
     app = R3DApp()
     app.connect_to_device(dev_idx=0)
-    print("connected")
+    logging.info("connected")
     camera_publisher = ImagePublisher(app)
-    # print('calling publisher')
     camera_publisher.publish_image_from_camera()
-    # print('publisher end')

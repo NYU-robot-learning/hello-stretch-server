@@ -1,15 +1,18 @@
 from .tensor_subscriber import TensorSubscriber
 
-from .hello_robot import HelloRobot as SyncHelloRobot
-from .hello_robot_async import HelloRobot as AsyncHelloRobot
+from .hello_robot import HelloRobot
 import rospy
 from std_msgs.msg import Int64
 import random
-import pickle
 import argparse
 from multiprocessing import Value
 import numpy as np
 import time
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 PING_TOPIC_NAME = "/run_model_ping"
 STATE_TOPIC_NAME = "/run_model_state"
@@ -36,7 +39,7 @@ args = parser.parse_args()
 params = vars(args)
 
 
-class Listner:
+class Listener:
     GRIPPER_SAFETY_LIMITS = (-1.0, 1.0)
     TRANSLATION_SAFETY_LIMITS = (-0.05, 0.05)
 
@@ -46,22 +49,17 @@ class Listner:
         gripper_safety_limits=GRIPPER_SAFETY_LIMITS,
         translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
         stream_during_motion=True,
-        async_mode=False,
     ):
-        print("starting robot listner")
+        logging.info("Starting robot listener")
         if hello_robot is None:
-            self.hello_robot = AsyncHelloRobot() if async_mode else SyncHelloRobot()
-            if async_mode:
-                self.hello_robot.startup(home=True)
-            print("Starting in synchronization mode: ", async_mode)
+            self.hello_robot = HelloRobot()
         else:
             self.hello_robot = hello_robot
-        
 
         try:
             rospy.init_node("Acting_node")
         except rospy.exceptions.ROSException:
-            print("node already initialized")
+            logging.warn("Node already initialized.")
         self.hello_robot.home()
         self._create_publishers()
         self.tensor_subscriber = TensorSubscriber()
@@ -81,11 +79,11 @@ class Listner:
         self.ping_publisher.publish(Int64(self.uid))
 
     def _publish_uid(self):
-        print("published uid", self.uid)
+        logging.info("Published uid: ", self.uid)
         self.ping_publisher.publish(Int64(self.uid))
 
     def _wait_for_data(self):
-        print("waiting for the data")
+        logging.info("Waiting for the data")
         wait_count = 0
         waiting = True
         while waiting:
@@ -108,15 +106,11 @@ class Listner:
             self.rate.sleep()
 
     def _wait_for_robot_motion(self):
-        # hello_robot robot.arm.wait_until_at_setpoint()
         if self.stream_during_motion:
-            print("Waiting for robot motion, but streaming...")
+            logging.info("Waiting for robot motion, but streaming...")
             time.sleep(8 / 10)
             return
-        # self.hello_robot.robot.arm.wait_until_at_setpoint()
-        # self.hello_robot.robot.lift.wait_until_at_setpoint()
-        # self.hello_robot.robot.base.wait_until_at_setpoint()
-        print("Waiting for robot motion...")
+        logging.info("Waiting for robot motion...")
         time.sleep(1.0)
 
     def _wait_till_ready(self):
@@ -131,7 +125,7 @@ class Listner:
         elif self.tensor_subscriber.home_params_offset == self.uid:
             self.hello_robot.set_home_position(*self.tensor_subscriber.home_params)
         else:
-            print("Received action to execute at ", time.time())
+            logging.debug("Received action to execute at ", time.time())
             translation_tensor = np.clip(
                 np.array(self.tensor_subscriber.translation_tensor),
                 a_min=self.translation_safety_limits[0],
@@ -160,5 +154,5 @@ class Listner:
 
 
 if __name__ == "__main__":
-    listner_object = Listner()
+    listner_object = Listener()
     listner_object.start()

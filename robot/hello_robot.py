@@ -3,13 +3,13 @@ import numpy as np
 import PyKDL
 import rospy
 
-# from baxter_kdl.kdl_parser import kdl_tree_from_urdf_model
+from typing import Union
 from urdf_parser_py.urdf import URDF
 from scipy.spatial.transform import Rotation as R
 import math
 import time
-import random
 import os
+import logging
 from .utils import (
     euler_to_quat,
     urdf_joint_to_kdl_joint,
@@ -18,6 +18,9 @@ from .utils import (
     kdl_tree_from_urdf_model,
 )
 
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 pick_place = [38.0, 15, 47]  # 15 looks wrong
 pouring = [33, 19, 53]
@@ -26,15 +29,41 @@ OVERRIDE_STATES = {}
 
 
 class HelloRobot:
+    """
+    This class is a wrapper for the Hello Robot Stretch RE1 robot.
+    It provides a simple interface to control the robot and move the robot to a desired position.
+
+    Parameters:
+    -----------
+    urdf_file: str
+        The path to the urdf file of the robot. Default is "./urdf/stretch_nobase_raised.urdf"
+    stretch_gripper_max: int
+        The maximum opening on the gripper, using stepper motor units. The value should come
+        out of Stretch robot calibration, and on our robot it is 47.
+    stretch_gripper_min: int
+        The minimum opening on the gripper, using stepper motor units. The value should come
+        out of Stretch robot calibration, and on our robot it is 0. On a calibrated robot it
+        should be around 0 (fingertips barely touching).
+    gripper_threshold: int
+        The gripper threshold at which the robot should close its gripper. Should be a value
+        between [stretch_gripper_min, stretch_gripper_max].
+    sticky_gripper: bool
+        If True, the gripper will stay closed after it has gripped an object. If False, the
+        gripper may open after it has gripped an object.
+    gripper_threshold_post_grasp: int
+        The gripper threshold at which the robot should open its gripper after it has grasped
+        an object. Should be a value between [stretch_gripper_min, stretch_gripper_max].
+    """
+
     def __init__(
         self,
-        urdf_file="stretch_nobase_raised.urdf",
-        gripper_threshold=18, #17
-        stretch_gripper_max=47,
-        stretch_gripper_min=0,
-        stretch_gripper_tight=-35,
-        sticky_gripper=True,
-        gripper_threshold_post_grasp=14.5,
+        urdf_file: str = "stretch_nobase_raised.urdf",
+        stretch_gripper_max: Union[float, int] = 47,
+        stretch_gripper_min: Union[float, int] = 0,
+        gripper_threshold: Union[float, int] = 18,
+        stretch_gripper_tight: Union[float, int] = -35,
+        sticky_gripper: bool = True,
+        gripper_threshold_post_grasp: Union[float, int] = 14.5,
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -47,7 +76,9 @@ class HelloRobot:
             os.path.dirname(os.path.abspath(__file__)), "urdf", self.urdf_file
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
-        self.GRIPPER_THRESHOLD_POST_GRASP = gripper_threshold_post_grasp or gripper_threshold
+        self.GRIPPER_THRESHOLD_POST_GRASP = (
+            gripper_threshold_post_grasp or gripper_threshold
+        )
 
         # Initializing ROS node
         self.joint_list = [
@@ -64,7 +95,7 @@ class HelloRobot:
         try:
             rospy.init_node("hello_robot_node")
         except:
-            print("node already initialized")
+            logging.warn("Node already initialized")
 
         self.robot = stretch_body.robot.Robot()
         self.startup()
@@ -117,20 +148,19 @@ class HelloRobot:
             self.robot.get_status()["arm"]["pos"] > arm_pos + 0.002
             or self.robot.get_status()["arm"]["pos"] < arm_pos - 0.002
         ):
-            # print(self.robot.get_status()['arm']['pos'])
             self.robot.arm.move_to(arm_pos)
             self.robot.push_command()
 
         self.robot.end_of_arm.move_to("wrist_yaw", wrist_yaw)
         PITCH_VAL = wrist_pitch
         self.robot.end_of_arm.move_to("wrist_pitch", PITCH_VAL)
-        # NOTE: belwo code is to fix the pitch drift issue in current hello-robot. Remove it if there is no pitch drift issue
+        # NOTE: code below is to fix the pitch drift issue in current hello-robot.
         OVERRIDE_STATES["wrist_pitch"] = PITCH_VAL
         self.robot.end_of_arm.move_to("wrist_roll", wrist_roll)
         self.robot.base.translate_by(base_trans)
-        print("moving to position 3")
+        logging.debug("moving to position 3")
         self.robot.push_command()
-        print("moving to position 4")
+        logging.debug("moving to position 4")
 
     def set_home_position(
         self,
@@ -180,30 +210,13 @@ class HelloRobot:
         )
 
     def updateJoints(self):
-        # Update the joint state values in 'self.joints' using hellorobot api calls
-        # print('x, y:', self.robot.base.status['x'], self.robot.base.status['y'])
-
         origin_dist = math.sqrt(
             (self.base_y - self.robot.base.status["y"]) ** 2
             + (self.base_x - self.robot.base.status["x"]) ** 2
         )
 
-        # print('orig_dist:', origin_dist)
-        # far_dist = math.sqrt((self.far_y - self.robot.base.status['y'])**2+(self.far_x - self.robot.base.status['x'])**2)
-
-        ## commented for debugging
-        # print('far dist vals:', far_dist, self.far_to_origin)
-        # if(far_dist <= self.far_to_origin):
-        ## commented for debugging
-
         self.joints["joint_fake"] = origin_dist
-        ## commented for debugging
-        # else:
-        #     self.joints['joints_fake'] = -1*origin_dist
-        ## commented for debugging
-
         self.joints["joint_lift"] = self.robot.lift.status["pos"]
-
         armPos = self.robot.arm.status["pos"]
         self.joints["joint_arm_l3"] = armPos / 4.0
         self.joints["joint_arm_l2"] = armPos / 4.0
@@ -219,27 +232,23 @@ class HelloRobot:
         self.joints["joint_wrist_pitch"] = OVERRIDE_STATES.get(
             "wrist_pitch", self.robot.end_of_arm.status["wrist_pitch"]["pos"]
         )
-        # self.joints["joint_wrist_pitch"] = self.robot.end_of_arm.status["wrist_pitch"]["pos"]
-        # print("1:", OVERRIDE_STATES["wrist_pitch"])
-        # print("2:", self.robot.end_of_arm.status["wrist_pitch"]["pos"])
-
         self.joints["joint_stretch_gripper"] = self.robot.end_of_arm.status[
             "stretch_gripper"
         ]["pos"]
 
     def get_threshold(self):
-        return self.GRIPPER_THRESHOLD if not self._has_gripped else self.GRIPPER_THRESHOLD_POST_GRASP
+        return (
+            self.GRIPPER_THRESHOLD
+            if not self._has_gripped
+            else self.GRIPPER_THRESHOLD_POST_GRASP
+        )
 
-    # following function is used to move the robot to a desired joint configuration
     def move_to_joints(self, joints, gripper):
+        # Move the robot to a desired joint configuration
         # update the robot joints to the new values from 'joints'
 
-        ## the commented code adds a wall on the right side of the robot wrt its starting base position
+        # You can manipulate the joints dictionary, for example to add a "wall" on the right side of the robot
         # joints['joint_fake'] = self.clamp(joints['joint_fake'], 0.0002, 0.20)
-
-        # print('jt_fk:',joints['joint_fake'])
-        # self.base_motion += joints['joint_fake']-self.joints['joint_fake']
-        # print('base motion:', self.base_motion)
 
         self.robot.base.translate_by(
             joints["joint_fake"] - self.joints["joint_fake"], 5
@@ -260,33 +269,35 @@ class HelloRobot:
         self.robot.end_of_arm.move_to(
             "wrist_pitch", self.clamp(joints["joint_wrist_pitch"], -0.8, 0.2)
         )
-        # NOTE: belwo code is to fix the pitch drift issue in current hello-robot. Remove it if there is no pitch drift issue
+
+        # NOTE: Code below is to fix the pitch drift issue in current hello-robot.
         OVERRIDE_STATES["wrist_pitch"] = joints["joint_wrist_pitch"]
         self.robot.end_of_arm.move_to(
             "wrist_roll", self.clamp(joints["joint_wrist_roll"], -1.57, 1.57)
         )
-        print("Gripper state before update:", self.CURRENT_STATE)
-        print("Gripper instruction from the policy:", gripper[0])
-        # gripper[0] value ranges from 0 to 1, 0 being closed and 1 being open. Below code maps the gripper value to the range of the gripper joint
+        logging.debug("Gripper state before update:", self.CURRENT_STATE)
+        logging.debug("Gripper instruction from the policy:", gripper[0])
+
+        # gripper[0] value ranges from 0 to 1, 0 being closed and 1 being open.
+        # This code maps the gripper value to the range of the gripper joint
         self.CURRENT_STATE = (
             gripper[0] * (self.STRETCH_GRIPPER_MAX - self.STRETCH_GRIPPER_MIN)
             + self.STRETCH_GRIPPER_MIN
         )
 
-        print("Gripper state after update:", self.CURRENT_STATE)
+        logging.debug("Gripper state after update:", self.CURRENT_STATE)
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
-        # code below is to map values below certain threshold to negative values to close the gripper much tighter
-        print("Gripper state after update:", self.GRIPPER_THRESHOLD)
+        logging.debug("Gripper state after update:", self.GRIPPER_THRESHOLD)
 
-        if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
+        # Map values below certain threshold to negative values to close the gripper much tighter
+        if self.CURRENT_STATE < self.get_threshold() or (
+            self._sticky_gripper and self._has_gripped
+        ):
             self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT)
             self._has_gripped = True
         else:
-            self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
+            self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_MAX)
         self.robot.push_command()
-
-        # sleeping to make sure all the joints are updated correctly (remove if not necessary)
-        # time.sleep(.7)
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         translation = [
@@ -308,7 +319,6 @@ class HelloRobot:
 
         rot_matrix = R.from_euler("xyz", rotation, degrees=False).as_matrix()
 
-        # new code from here
         del_rot = PyKDL.Rotation(
             PyKDL.Vector(rot_matrix[0][0], rot_matrix[1][0], rot_matrix[2][0]),
             PyKDL.Vector(rot_matrix[0][1], rot_matrix[1][1], rot_matrix[2][1]),
@@ -325,16 +335,7 @@ class HelloRobot:
         ik_joints = {}
 
         for joint_index in range(self.joint_array.rows()):
-            # print(joint_index)
-            # print(joint_list[joint_index])
             ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
-
-        # print('ik_joints', ik_joints)
-        # test_pose = PyKDL.Frame()
-        # self.fk_p_kdl.JntToCart(self.joint_array, test_pose)
-
-        # # print(test_pose.p)
-        # # print(test_pose.M.GetRPY())
 
         self.move_to_joints(ik_joints, gripper)
 

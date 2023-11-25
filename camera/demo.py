@@ -2,6 +2,11 @@ import numpy as np
 from record3d import Record3DStream
 import cv2
 from threading import Event
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 class R3DApp:
@@ -20,14 +25,14 @@ class R3DApp:
 
     def on_stream_stopped(self):
         self.stream_stopped = True
-        print("Stream stopped")
+        logging.info("Stream stopped")
 
     def connect_to_device(self, dev_idx):
-        print("Searching for devices")
+        logging.info("Searching for devices")
         devs = Record3DStream.get_connected_devices()
-        print("{} device(s) found".format(len(devs)))
+        logging.info("{} device(s) found".format(len(devs)))
         for dev in devs:
-            print("\tID: {}\n\tUDID: {}\n".format(dev.product_id, dev.udid))
+            logging.info("\tID: {}\n\tUDID: {}\n".format(dev.product_id, dev.udid))
 
         if len(devs) <= dev_idx:
             raise RuntimeError(
@@ -77,8 +82,8 @@ class R3DApp:
             camera_pose = (
                 self.session.get_camera_pose()
             )  # Quaternion + world position (accessible via camera_pose.[qx|qy|qz|qw|tx|ty|tz])
-            print("Camera Position:")
-            print(
+            logging.debug("Camera Position:")
+            logging.debug(
                 camera_pose.qx,
                 camera_pose.qy,
                 camera_pose.qz,
@@ -87,11 +92,10 @@ class R3DApp:
                 camera_pose.ty,
                 camera_pose.tz,
             )
-            print("Depth Matrix:")
-            print(intrinsic_mat)
+            logging.debug("Depth Matrix:")
+            logging.debug(intrinsic_mat)
 
             # You can now e.g. create point cloud by projecting the depth map using the intrinsic matrix.
-
             # Postprocess it
             if self.session.get_device_type() == self.DEVICE_TYPE__TRUEDEPTH:
                 depth = cv2.flip(depth, 1)

@@ -1,10 +1,15 @@
 from camera import R3DApp, ImagePublisher
-from robot import Listner, HelloRobot
+from robot import Listener, HelloRobot
 import cv2
 from multiprocessing import Process, Value
 import signal
 import sys
 import time
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def camera_process(app):
@@ -13,8 +18,8 @@ def camera_process(app):
 
 
 def robot_process(hello_robot):
-    print("robot process started")
-    listner = Listner(hello_robot)
+    logging.info("Robot process started")
+    listner = Listener(hello_robot)
     listner.start()
 
 
@@ -24,8 +29,8 @@ def stream_manager():
         try:
             app.connect_to_device(dev_idx=0)
         except RuntimeError as e:
-            print(e)
-            print(
+            logging.warn(e)
+            logging.warn(
                 "Retrying to connect to device with id {idx}, make sure the device is connected and id is correct...".format(
                     idx=0
                 )
@@ -35,8 +40,8 @@ def stream_manager():
     try:
         camera_process(app)
     except cv2.error as e:
-        print(e)
-        print(
+        logging.warn(e)
+        logging.warn(
             "The device was connected but the stream didn't start, trying to reconnect..."
         )
         time.sleep(2)
@@ -47,12 +52,14 @@ def stream_manager():
 
     stream_manager()
 
+
 if __name__ == "__main__":
     t2 = Process(target=robot_process, args=(None,))
     t2.start()
+
     def signal_handler(sig, frame):
         t2.terminate()
         sys.exit(0)
+
     signal.signal(signal.SIGINT, signal_handler)
     stream_manager()
-

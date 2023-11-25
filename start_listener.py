@@ -1,5 +1,4 @@
-from robot import listner, HelloRobot
-import multiprocessing
+from robot import listener, HelloRobot
 
 import argparse
 
@@ -38,6 +37,4 @@ if __name__ == "__main__":
         params["gripper"],
     )
 
-    # p = multiprocessing.Process(target=listner, args=(hello_robot, ))
-    # p.start()
-    listner(hello_robot)
+    listener(hello_robot)

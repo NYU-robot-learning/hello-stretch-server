@@ -1,5 +1,10 @@
 import numpy as np
 import PyKDL
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def euler_to_quat(r, p, y):
@@ -31,7 +36,7 @@ def urdf_joint_to_kdl_joint(jnt):
         return kdl.Joint(
             jnt.name, origin_frame.p, origin_frame.M * axis, kdl.Joint.TransAxis
         )
-    print("Unknown joint type: %s." % jnt.joint_type)
+    logging.warn("Unknown joint type: %s." % jnt.joint_type)
     return kdl.Joint(jnt.name, kdl.Joint.Fixed)
 
 
@@ -65,7 +70,6 @@ def urdf_inertial_to_kdl_rbi(i):
     return origin.M * rbi
 
 
-##
 # Returns a PyKDL.Tree generated from a urdf_parser_py.urdf.URDF object.
 def kdl_tree_from_urdf_model(urdf):
     kdl = PyKDL

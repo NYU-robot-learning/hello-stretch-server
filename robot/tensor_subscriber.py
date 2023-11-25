@@ -1,6 +1,5 @@
 import numpy as np
 import rospy
-from IPython import embed
 
 from std_msgs.msg import Float64MultiArray
 
@@ -78,15 +77,3 @@ class TensorSubscriber(object):
     def _callback_home_params(self, data):
         self.home_params = list(data.data)
         self.home_params_offset = data.layout.data_offset
-
-
-# Create an object
-# from tensor_subscriber import TensorSubscriber
-# tensor_sub_object = TensorSubscriber()
-# rate = rospy.Rate(10)
-# while(True):
-# if translation_tensor is not None and rotational_tensor is not None and gripper_tensor is not None:
-#   translation_tensor = tensor_sub_object.translation_tensor
-#   rotational_tensor = tensor_sub_object.rotational_tensor
-#   gripper_tensor = tensor_sub_object.gripper_tensor
-#   rate.sleep()
