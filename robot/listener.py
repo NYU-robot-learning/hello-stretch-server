@@ -2,7 +2,7 @@ import argparse
 import logging
 import random
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import rospy
@@ -10,15 +10,10 @@ from std_msgs.msg import Int64
 
 from .hello_robot import HelloRobot
 from .tensor_subscriber import TensorSubscriber
-import multiprocessing
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+from .utils import get_color_logger
 
 PING_TOPIC_NAME = "/run_model_ping"
 STATE_TOPIC_NAME = "/run_model_state"
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--lift", type=float, default=0.5, help="position of robot lift")
@@ -48,12 +43,14 @@ class Listener:
     def __init__(
         self,
         hello_robot: Optional[HelloRobot] = None,
-        gripper_safety_limits=GRIPPER_SAFETY_LIMITS,
-        translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
-        stream_during_motion=True,
+        gripper_safety_limits: Tuple[float, float] = GRIPPER_SAFETY_LIMITS,
+        translation_safety_limits: Tuple[float, float] = TRANSLATION_SAFETY_LIMITS,
+        stream_during_motion: bool = True,
+        rate: int = 5,
     ):
-        self.logger = multiprocessing.get_logger()
+        self.logger = logging.Logger("listener")
         self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(get_color_logger())
         self.logger.info("Starting robot listener")
         if hello_robot is None:
             self.hello_robot = HelloRobot()
@@ -67,7 +64,7 @@ class Listener:
         self.hello_robot.home()
         self._create_publishers()
         self.tensor_subscriber = TensorSubscriber()
-        self.rate = rospy.Rate(5)
+        self.rate = rospy.Rate(rate)
 
         self.gripper_safety_limits = gripper_safety_limits
         self.translation_safety_limits = translation_safety_limits
@@ -83,15 +80,19 @@ class Listener:
         self.ping_publisher.publish(Int64(self.uid))
 
     def _publish_uid(self):
-        self.logger.info(f"Published uid: {self.uid}")
+        self.logger.info(f"Published UID: {self.uid}; waiting for robot policy")
         self.ping_publisher.publish(Int64(self.uid))
 
     def _wait_for_data(self):
-        self.logger.info("Waiting for the data")
+        self.logger.info("Publishing UID over ROS, then waiting for robot policy")
+        if self.hello_robot.robot.pimu.status["runstop_event"]:
+            self.logger.warning(
+                "Robot run-stopped, remember to release run-stop before proceeding."
+            )
         wait_count = 0
         waiting = True
         while waiting:
-            # if wait_count > 10, publish uid again
+            # if wait_count > 15, i.e. 3 seconds have passed, publish uid again
             if wait_count > 15:
                 self._publish_uid()
                 wait_count = 0
@@ -118,7 +119,14 @@ class Listener:
         time.sleep(1.0)
 
     def _wait_till_ready(self):
+        wait_count = 0
         while self.hello_robot.robot.pimu.status["runstop_event"]:
+            wait_count += 1
+            if wait_count > 15:
+                self.logger.warn(
+                    "Robot run-stopped, waiting for run-stop to be released"
+                )
+                wait_count = 0
             self.rate.sleep()
 
     def _execute_action(self):
@@ -158,5 +166,5 @@ class Listener:
 
 
 if __name__ == "__main__":
-    listner_object = Listener()
-    listner_object.start()
+    listener_object = Listener()
+    listener_object.start()

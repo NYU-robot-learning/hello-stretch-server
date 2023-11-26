@@ -1,31 +1,20 @@
 import logging
 import math
-import multiprocessing
 import os
 import time
 from typing import Union
 
-import numpy as np
 import PyKDL
 import rospy
 import stretch_body.robot
 from scipy.spatial.transform import Rotation as R
 from urdf_parser_py.urdf import URDF
 
-from .utils import (
-    euler_to_quat,
-    kdl_tree_from_urdf_model,
-    urdf_inertial_to_kdl_rbi,
-    urdf_joint_to_kdl_joint,
-    urdf_pose_to_kdl_frame,
-)
+from .utils import kdl_tree_from_urdf_model
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-pick_place = [38.0, 15, 47]  # 15 looks wrong
-pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
 
@@ -71,8 +60,9 @@ class HelloRobot:
         sticky_gripper: bool = True,
         gripper_threshold_post_grasp: Union[float, int] = 14.5,
     ):
-        self.logger = multiprocessing.get_logger()
+        self.logger = logging.Logger("hello_robot")
         self.logger.setLevel(logging.INFO)
+
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
         self.STRETCH_GRIPPER_TIGHT = stretch_gripper_tight
