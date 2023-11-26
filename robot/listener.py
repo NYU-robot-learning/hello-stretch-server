@@ -80,7 +80,7 @@ class Listener:
         self.ping_publisher.publish(Int64(self.uid))
 
     def _publish_uid(self):
-        logging.info("Published uid: ", self.uid)
+        logging.info(f"Published uid: {self.uid}")
         self.ping_publisher.publish(Int64(self.uid))
 
     def _wait_for_data(self):
