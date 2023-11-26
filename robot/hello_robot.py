@@ -1,5 +1,6 @@
 import logging
 import math
+import multiprocessing
 import os
 import time
 from typing import Union
@@ -70,6 +71,8 @@ class HelloRobot:
         sticky_gripper: bool = True,
         gripper_threshold_post_grasp: Union[float, int] = 14.5,
     ):
+        self.logger = multiprocessing.get_logger()
+        self.logger.setLevel(logging.INFO)
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
         self.STRETCH_GRIPPER_TIGHT = stretch_gripper_tight
@@ -100,7 +103,7 @@ class HelloRobot:
         try:
             rospy.init_node("hello_robot_node")
         except:
-            logging.warning("Node already initialized")
+            self.logger.warning("Node already initialized")
 
         self.robot = stretch_body.robot.Robot()
         self.startup()
@@ -163,9 +166,9 @@ class HelloRobot:
         OVERRIDE_STATES["wrist_pitch"] = PITCH_VAL
         self.robot.end_of_arm.move_to("wrist_roll", wrist_roll)
         self.robot.base.translate_by(base_trans)
-        logging.debug("moving to position 3")
+        self.logger.debug("moving to position 3")
         self.robot.push_command()
-        logging.debug("moving to position 4")
+        self.logger.debug("moving to position 4")
 
     def set_home_position(
         self,
@@ -280,8 +283,8 @@ class HelloRobot:
         self.robot.end_of_arm.move_to(
             "wrist_roll", self.clamp(joints["joint_wrist_roll"], -1.57, 1.57)
         )
-        logging.debug("Gripper state before update:", self.CURRENT_STATE)
-        logging.debug("Gripper instruction from the policy:", gripper[0])
+        self.logger.debug("Gripper state before update:", self.CURRENT_STATE)
+        self.logger.debug("Gripper instruction from the policy:", gripper[0])
 
         # gripper[0] value ranges from 0 to 1, 0 being closed and 1 being open.
         # This code maps the gripper value to the range of the gripper joint
@@ -290,9 +293,9 @@ class HelloRobot:
             + self.STRETCH_GRIPPER_MIN
         )
 
-        logging.debug("Gripper state after update:", self.CURRENT_STATE)
+        self.logger.debug("Gripper state after update:", self.CURRENT_STATE)
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
-        logging.debug("Gripper state after update:", self.GRIPPER_THRESHOLD)
+        self.logger.debug("Gripper state after update:", self.GRIPPER_THRESHOLD)
 
         # Map values below certain threshold to negative values to close the gripper much tighter
         if self.CURRENT_STATE < self.get_threshold() or (

@@ -1,5 +1,6 @@
 import argparse
 import logging
+import multiprocessing
 import signal
 import sys
 import time
@@ -153,6 +154,7 @@ if __name__ == "__main__":
         sticky_gripper=(not params["unsticky_gripper"]),
         gripper_threshold_post_grasp=params["gripper_threshold_post_grasp"],
     )
+    logger = multiprocessing.log_to_stderr(logging.INFO)
     robot_thread = Process(target=robot_process, args=(hello_robot_params,))
     robot_thread.start()
 

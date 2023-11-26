@@ -10,6 +10,7 @@ from std_msgs.msg import Int64
 
 from .hello_robot import HelloRobot
 from .tensor_subscriber import TensorSubscriber
+import multiprocessing
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -51,7 +52,9 @@ class Listener:
         translation_safety_limits=TRANSLATION_SAFETY_LIMITS,
         stream_during_motion=True,
     ):
-        logging.info("Starting robot listener")
+        self.logger = multiprocessing.get_logger()
+        self.logger.setLevel(logging.INFO)
+        self.logger.info("Starting robot listener")
         if hello_robot is None:
             self.hello_robot = HelloRobot()
         else:
@@ -60,7 +63,7 @@ class Listener:
         try:
             rospy.init_node("Acting_node")
         except rospy.exceptions.ROSException:
-            logging.warning("Node already initialized.")
+            self.logger.warning("Node already initialized.")
         self.hello_robot.home()
         self._create_publishers()
         self.tensor_subscriber = TensorSubscriber()
@@ -80,11 +83,11 @@ class Listener:
         self.ping_publisher.publish(Int64(self.uid))
 
     def _publish_uid(self):
-        logging.info(f"Published uid: {self.uid}")
+        self.logger.info(f"Published uid: {self.uid}")
         self.ping_publisher.publish(Int64(self.uid))
 
     def _wait_for_data(self):
-        logging.info("Waiting for the data")
+        self.logger.info("Waiting for the data")
         wait_count = 0
         waiting = True
         while waiting:
@@ -108,10 +111,10 @@ class Listener:
 
     def _wait_for_robot_motion(self):
         if self.stream_during_motion:
-            logging.info("Waiting for robot motion, but streaming...")
+            self.logger.info("Waiting for robot motion, but streaming...")
             time.sleep(8 / 10)
             return
-        logging.info("Waiting for robot motion...")
+        self.logger.info("Waiting for robot motion...")
         time.sleep(1.0)
 
     def _wait_till_ready(self):
@@ -126,7 +129,7 @@ class Listener:
         elif self.tensor_subscriber.home_params_offset == self.uid:
             self.hello_robot.set_home_position(*self.tensor_subscriber.home_params)
         else:
-            logging.debug("Received action to execute at ", time.time())
+            self.logger.debug("Received action to execute at ", time.time())
             translation_tensor = np.clip(
                 np.array(self.tensor_subscriber.translation_tensor),
                 a_min=self.translation_safety_limits[0],
