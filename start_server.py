@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 from multiprocessing import Process
-from typing import Optional
+from typing import Dict, Optional
 
 import cv2
 
@@ -21,8 +21,12 @@ def camera_process(app: R3DApp):
     camera_publisher.publish_image_from_camera()
 
 
-def robot_process(hello_robot: Optional[HelloRobot]):
+def robot_process(hello_robot_params: Optional[Dict]):
     logging.info("Robot process started")
+    if hello_robot_params is None:
+        hello_robot = HelloRobot()
+    else:
+        hello_robot = HelloRobot(**hello_robot_params)
     listner = Listener(hello_robot)
     listner.start()
 
@@ -141,15 +145,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     params = vars(args)
     logging.debug(params)
-    hello_robot = HelloRobot(
+    hello_robot_params = dict(
         stretch_gripper_max=params["gripper_max"],
         stretch_gripper_min=params["gripper_min"],
         stretch_gripper_tight=params["gripper_tight"],
         gripper_threshold=params["gripper_threshold"],
-        sticky_gripper=params["sticky_gripper"],
+        sticky_gripper=(not params["unsticky_gripper"]),
         gripper_threshold_post_grasp=params["gripper_threshold_post_grasp"],
     )
-    robot_thread = Process(target=robot_process, args=(hello_robot,))
+    robot_thread = Process(target=robot_process, args=(hello_robot_params,))
     robot_thread.start()
 
     def signal_handler(sig, frame):
