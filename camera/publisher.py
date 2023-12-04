@@ -76,7 +76,7 @@ class ImagePublisher(object):
         self._seq = 0
 
     def publish_image_from_camera(self):
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(50)
         while True:
             image, depth, pose = self.app.start_process_image()
             image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
