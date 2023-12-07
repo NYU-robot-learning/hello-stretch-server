@@ -11,6 +11,8 @@ from rospy_tutorials.msg import Floats
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
 from geometry_msgs.msg import Pose, Point, Quaternion
 
+import threading
+
 
 # from numpy_ros import converts_to_message, to_message
 from .demo import R3DApp
@@ -61,19 +63,23 @@ class ImagePublisher(object):
             print(e)
             print("ROS node already initialized")
         self.bridge = CvBridge()
-        self.image_publisher = rospy.Publisher(
-            IMAGE_PUBLISHER_NAME, Image, queue_size=1
-        )
-        self.depth_publisher = rospy.Publisher(
-            DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
-        )
-        self.seq_publisher = rospy.Publisher(
-            SEQ_PUBLISHER_NAME, Int32, queue_size=1
-        )
-        self.pose_publisher = rospy.Publisher(
-            POSE_PUBLISHER_NAME, Pose, queue_size=1
-        )
+        self.image_publisher = rospy.Publisher(IMAGE_PUBLISHER_NAME, Image, queue_size=1)
+        self.depth_publisher = rospy.Publisher(DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1)
+        self.seq_publisher = rospy.Publisher(SEQ_PUBLISHER_NAME, Int32, queue_size=1)
+        self.pose_publisher = rospy.Publisher(POSE_PUBLISHER_NAME, Pose, queue_size=1)
         self._seq = 0
+
+        # Start the separate thread for pose publishing
+        self.pose_thread = threading.Thread(target=self.publish_pose)
+        self.pose_thread.start()
+
+    def publish_pose(self):
+        rate = rospy.Rate(10)  # Pose publishing rate
+        while not rospy.is_shutdown():
+            _, _, pose = self.app.start_process_image()
+            pose_msg = convert_numpy_array_to_pose(pose)
+            self.pose_publisher.publish(pose_msg)
+            rate.sleep()
 
     def publish_image_from_camera(self):
         rate = rospy.Rate(50)
@@ -92,7 +98,6 @@ class ImagePublisher(object):
             depth_data = convert_numpy_array_to_float32_multi_array(depth)
             self.image_publisher.publish(self.image_message)
             self.depth_publisher.publish(depth_data)
-            self.pose_publisher.publish(convert_numpy_array_to_pose(pose))  
             self.seq_publisher.publish(Int32(self._seq))
             self._seq += 1
 
