@@ -22,6 +22,7 @@ IMAGE_PUBLISHER_NAME = "/gopro_image"
 DEPTH_PUBLISHER_NAME = "/gopro_depth"
 POSE_PUBLISHER_NAME = "/gopro_pose"
 SEQ_PUBLISHER_NAME = "/gopro_seq"
+POSE_SEQ_PUBLISHER_NAME = "/gopro_pose_seq"
 
 
 # @converts_to_message(Float32MultiArray))
@@ -67,6 +68,7 @@ class ImagePublisher(object):
         self.depth_publisher = rospy.Publisher(DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1)
         self.seq_publisher = rospy.Publisher(SEQ_PUBLISHER_NAME, Int32, queue_size=1)
         self.pose_publisher = rospy.Publisher(POSE_PUBLISHER_NAME, Pose, queue_size=1)
+        self.pose_seq_publisher = rospy.Publisher(POSE_SEQ_PUBLISHER_NAME, Int32, queue_size=1)
         self._seq = 0
 
         # Start the separate thread for pose publishing
@@ -75,10 +77,13 @@ class ImagePublisher(object):
 
     def publish_pose(self):
         rate = rospy.Rate(10)  # Pose publishing rate
+        pose_seq = 0
         while not rospy.is_shutdown():
             _, _, pose = self.app.start_process_image()
             pose_msg = convert_numpy_array_to_pose(pose)
             self.pose_publisher.publish(pose_msg)
+            self.pose_seq_publisher.publish(Int32(pose_seq))
+            pose_seq += 1
             rate.sleep()
 
     def publish_image_from_camera(self):

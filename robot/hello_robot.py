@@ -29,7 +29,8 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file="stretch_nobase_raised.urdf",
-        gripper_threshold=0.33*47, #17
+        gripper_threshold=0.33*47, #17 
+        # if closes too early, make threshold low
         stretch_gripper_max=47,
         stretch_gripper_min=0,
         stretch_gripper_tight=-35,
@@ -276,12 +277,12 @@ class HelloRobot:
         print("Gripper state after update:", self.CURRENT_STATE)
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
         # code below is to map values below certain threshold to negative values to close the gripper much tighter
-        print("Gripper state after update:", self.GRIPPER_THRESHOLD)
-        if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
-            self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
-            self._has_gripped = True
-        else:
-            self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
+        # print("Gripper state after update:", self.GRIPPER_THRESHOLD)
+        # if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
+        #     self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
+        #     self._has_gripped = True
+        # else:
+        #     self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
         self.robot.push_command()
 
         # sleeping to make sure all the joints are updated correctly (remove if not necessary)
