@@ -92,7 +92,7 @@ parser.add_argument(
 parser.add_argument(
     "-s",
     "--unsticky_gripper",
-    action="store_false",
+    action="store_true",
     help=(
         "Turn off sticky gripper; without it gripper will open and close every time threshold is passed. "
         "With sticky grasp, grasping an object means robot won't open grasp again afterwards."
