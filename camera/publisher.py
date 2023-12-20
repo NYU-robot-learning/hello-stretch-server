@@ -81,6 +81,9 @@ class ImagePublisher(object):
         while not rospy.is_shutdown():
             _, _, pose = self.app.start_process_image()
             pose_msg = convert_numpy_array_to_pose(pose)
+            if pose_msg.orientation.x == 0 and pose_msg.orientation.y == 0 and \
+            pose_msg.orientation.z == 0 and pose_msg.orientation.w == 0:
+                continue  # Skip this iteration and do not publish
             self.pose_publisher.publish(pose_msg)
             self.pose_seq_publisher.publish(Int32(pose_seq))
             pose_seq += 1

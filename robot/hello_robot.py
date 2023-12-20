@@ -29,7 +29,7 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file="stretch_nobase_raised.urdf",
-        gripper_threshold=0.33*47, #17 
+        gripper_threshold=0.4*47, #17 
         # if closes too early, make threshold low
         stretch_gripper_max=47,
         stretch_gripper_min=0,
