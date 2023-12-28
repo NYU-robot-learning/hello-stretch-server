@@ -29,7 +29,7 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file="stretch_nobase_raised.urdf",
-        gripper_threshold=0.57*47, #17 
+        gripper_threshold=0.33*47, #17 
         # if closes too early, make threshold low
         stretch_gripper_max=47,
         stretch_gripper_min=0,
@@ -283,7 +283,7 @@ class HelloRobot:
         #     self._has_gripped = True
         # else:
         #     self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
-        self.robot.push_command()
+        # self.robot.push_command()
 
         # sleeping to make sure all the joints are updated correctly (remove if not necessary)
         # time.sleep(.7)

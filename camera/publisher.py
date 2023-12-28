@@ -76,6 +76,12 @@ class ImagePublisher(object):
         self.pose_thread.start()
 
     def publish_pose(self):
+        """
+        Publish the pose of the camera in a separate thread from the image. 
+        Skip the pose if the quaternion is not valid (all zeros).
+        Add a seq number to the pose message for synchronization.
+        Publish at rate 10 because that's how fast the controller runs.
+        """
         rate = rospy.Rate(10)  # Pose publishing rate
         pose_seq = 0
         while not rospy.is_shutdown():
