@@ -82,7 +82,7 @@ class ImagePublisher(object):
         Add a seq number to the pose message for synchronization.
         Publish at rate 10 because that's how fast the controller runs.
         """
-        rate = rospy.Rate(10)  # Pose publishing rate
+        rate = rospy.Rate(50)  # Pose publishing rate
         pose_seq = 0
         while not rospy.is_shutdown():
             _, _, pose = self.app.start_process_image()
