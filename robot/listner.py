@@ -38,7 +38,7 @@ params = vars(args)
 
 class Listner:
     GRIPPER_SAFETY_LIMITS = (-1.0, 1.0)
-    TRANSLATION_SAFETY_LIMITS = (-0.05, 0.05)
+    TRANSLATION_SAFETY_LIMITS = (-0.30, 0.30)
 
     def __init__(
         self,

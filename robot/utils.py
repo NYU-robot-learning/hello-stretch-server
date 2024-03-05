@@ -1,5 +1,11 @@
+import logging
+
 import numpy as np
 import PyKDL
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def euler_to_quat(r, p, y):
@@ -17,7 +23,7 @@ def urdf_joint_to_kdl_joint(jnt):
     kdl = PyKDL
     origin_frame = urdf_pose_to_kdl_frame(jnt.origin)
     if jnt.joint_type == "fixed":
-        return kdl.Joint(jnt.name, getattr(kdl.Joint, "None"))
+        return kdl.Joint(jnt.name, kdl.Joint.Fixed)
     axis = kdl.Vector(*jnt.axis)
     if jnt.joint_type == "revolute":
         return kdl.Joint(
@@ -31,7 +37,7 @@ def urdf_joint_to_kdl_joint(jnt):
         return kdl.Joint(
             jnt.name, origin_frame.p, origin_frame.M * axis, kdl.Joint.TransAxis
         )
-    print("Unknown joint type: %s." % jnt.joint_type)
+    logging.warning("Unknown joint type: %s." % jnt.joint_type)
     return kdl.Joint(jnt.name, kdl.Joint.Fixed)
 
 
@@ -65,7 +71,6 @@ def urdf_inertial_to_kdl_rbi(i):
     return origin.M * rbi
 
 
-##
 # Returns a PyKDL.Tree generated from a urdf_parser_py.urdf.URDF object.
 def kdl_tree_from_urdf_model(urdf):
     kdl = PyKDL
@@ -88,3 +93,31 @@ def kdl_tree_from_urdf_model(urdf):
 
     add_children_to_tree(root)
     return tree
+
+
+def get_color_logger():
+    class CustomFormatter(logging.Formatter):
+        grey = "\x1b[38;20m"
+        yellow = "\x1b[33;20m"
+        red = "\x1b[31;20m"
+        bold_red = "\x1b[31;1m"
+        reset = "\x1b[0m"
+        format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+        FORMATS = {
+            logging.DEBUG: grey + format + reset,
+            logging.INFO: grey + format + reset,
+            logging.WARNING: yellow + format + reset,
+            logging.ERROR: red + format + reset,
+            logging.CRITICAL: bold_red + format + reset,
+        }
+
+        def format(self, record):
+            log_fmt = self.FORMATS.get(record.levelno)
+            formatter = logging.Formatter(log_fmt)
+            return formatter.format(record)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(CustomFormatter())
+    return ch
