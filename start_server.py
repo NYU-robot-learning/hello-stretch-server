@@ -2,6 +2,8 @@ from camera import R3DApp, ImagePublisher
 from robot import Listner, HelloRobot
 import cv2
 from multiprocessing import Process, Value
+import signal
+import sys
 import time
 
 
@@ -45,8 +47,12 @@ def stream_manager():
 
     stream_manager()
 
-
 if __name__ == "__main__":
     t2 = Process(target=robot_process, args=(None,))
     t2.start()
+    def signal_handler(sig, frame):
+        t2.terminate()
+        sys.exit(0)
+    signal.signal(signal.SIGINT, signal_handler)
     stream_manager()
+

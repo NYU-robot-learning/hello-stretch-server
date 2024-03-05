@@ -24,15 +24,15 @@
 
 
 
-First clone the repository to your hellor robot. Using requirements.txt, you can install the required packages.
+First clone the repository to your hello robot. Using requirements.txt, you can install the required packages.
 
 To run the server, follow the following steps:
-* Make sure your robot is callibrated by running 
+* Make sure your robot is joint-calibrated by running 
   ```sh
   stretch_robot_home.py
   ```
-* Once callibrated run ```roscore``` in an independent terminal
-* The in a new terminal, cd to the project directory and run 
+* Once calibrated, run ```roscore``` in an independent terminal
+* Then, in a new terminal, cd to the hello-stretch-server directory and run 
   ```sh
   python3 start_server.py
   ```
