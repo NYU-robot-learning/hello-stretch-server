@@ -1,5 +1,4 @@
 import cv2
-import rospy
 
 import numpy as np
 import time
@@ -7,9 +6,7 @@ from imgcat import imgcat
 import pyrealsense2 as rs
 
 from sensor_msgs.msg import Image
-from rospy.numpy_msg import numpy_msg
 from cv_bridge import CvBridge, CvBridgeError
-from rospy_tutorials.msg import Floats
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
 
 # from numpy_ros import converts_to_message, to_message
@@ -79,19 +76,19 @@ def setup_realsense_camera(serial_number, color_size, depth_size, fps):
 class D405ImagePublisher(object):
     def __init__(self):
         # Initializing ROS node
-        try:
-            rospy.init_node(NODE_NAME)
-        except rospy.exceptions.ROSException as e:
-            print(e)
-            print("ROS node already initialized")
+        # try:
+        #     rospy.init_node(NODE_NAME)
+        # except rospy.exceptions.ROSException as e:
+        #     print(e)
+        #     print("ROS node already initialized")
         self.bridge = CvBridge()
-        self.image_publisher = rospy.Publisher(
-            IMAGE_PUBLISHER_NAME, Image, queue_size=1
-        )
-        self.depth_publisher = rospy.Publisher(
-            DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
-        )
-        self.seq_publisher = rospy.Publisher(SEQ_PUBLISHER_NAME, Int32, queue_size=1)
+        # self.image_publisher = rospy.Publisher(
+        #     IMAGE_PUBLISHER_NAME, Image, queue_size=1
+        # )
+        # self.depth_publisher = rospy.Publisher(
+        #     DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
+        # )
+        # self.seq_publisher = rospy.Publisher(SEQ_PUBLISHER_NAME, Int32, queue_size=1)
         self._seq = 0
 
         try:
@@ -107,20 +104,25 @@ class D405ImagePublisher(object):
         )
 
     def publish_image_from_camera(self):
-        rate = rospy.Rate(D405_FPS)
+        # rate = rospy.Rate(D405_FPS)
         while True:
 
             frames_d405 = self.pipeline_d405.wait_for_frames()
-            image = frames_d405.get_color_frame()
-            depth = frames_d405.get_depth_frame()
+            color_frame_d405 = frames_d405.get_color_frame()
+            depth_frame_d405 = frames_d405.get_depth_frame()
+            image = np.asanyarray(color_frame_d405.get_data())
+            depth = np.asanyarray(depth_frame_d405.get_data())
 
             # image, depth, pose = self.app.start_process_image()
             # image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
             image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+            print(depth.min(), depth.max(), depth.shape)
+            cv2.imshow("D405 Depth pre", depth)
             depth = np.ascontiguousarray(depth).astype(np.float64)
+            print(depth.min(), depth.max(), depth.shape)
 
             cv2.imshow("D405", image)
-            cv2.imshow("D405 Depth", depth)
+            cv2.imshow("D405 Depth post", depth * 0.01)
 
             # Creating a CvBridge and publishing the data to the rostopic
             try:
@@ -129,19 +131,20 @@ class D405ImagePublisher(object):
                 print(e)
 
             depth_data = convert_numpy_array_to_float32_multi_array(depth)
-            self.image_publisher.publish(self.image_message)
-            self.depth_publisher.publish(depth_data)
-            self.seq_publisher.publish(Int32(self._seq))
+            # self.image_publisher.publish(self.image_message)
+            # self.depth_publisher.publish(depth_data)
+            # self.seq_publisher.publish(Int32(self._seq))
             self._seq += 1
 
             # Stopping the camera
             if cv2.waitKey(1) == 27:
                 break
-            if self.app.stream_stopped:
-                print("breaking")
-                break
+            # if self.app.stream_stopped:
+            #     print("breaking")
+            #     break
 
-            rate.sleep()
+            # rate.sleep()
+            time.sleep(1 / D405_FPS)
 
         cv2.destroyAllWindows()
 
