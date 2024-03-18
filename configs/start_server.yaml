@@ -1,0 +1,29 @@
+defaults:
+  - _self_
+  - network
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled  
+
+camera: 
+    _target_: camera.publisher.R3DCameraPublisher
+    host: ${host_address}
+    port: ${camera_port}
+    
+robot: 
+    _target_: robot.listener.Listener
+    host: ${host_address}
+    hello_robot: null
+    gripper_safety_limits: [-1.0, 1.0]
+    translation_safety_limits: [-0.5, 0.5]
+    stream_during_motion: True
+    port_configs: 
+      host: ${host_address}
+      action_port: ${action_port}
+      flag_port: ${flag_port}
+
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
+  

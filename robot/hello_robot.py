@@ -32,9 +32,9 @@ class HelloRobot:
         gripper_threshold=7, # unused
         stretch_gripper_max=51,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-10, -25],
+        stretch_gripper_tight=[-10],
         sticky_gripper=False,
-        gripper_threshold_post_grasp_list=[0.65*51, 0.3*51, 0.6*51, 0.8*51],
+        gripper_threshold_post_grasp_list=[0.6*51, 0.4*51],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -74,7 +74,7 @@ class HelloRobot:
         self.base_x = self.robot.base.status["x"]
         self.base_y = self.robot.base.status["y"]
 
-        time.sleep(2)
+        time.sleep(2) # TODO; check if can be removed
 
         # Constraining the robots movement
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
@@ -154,6 +154,9 @@ class HelloRobot:
     def home(self):
         self.not_grasped = True
         self._has_gripped = False
+
+        self.robot.push_command()
+
         self.threshold_count = 0
         self.move_to_position(
             self.home_lift,
@@ -190,20 +193,7 @@ class HelloRobot:
             + (self.base_x - self.robot.base.status["x"]) ** 2
         )
 
-        # print('orig_dist:', origin_dist)
-        # far_dist = math.sqrt((self.far_y - self.robot.base.status['y'])**2+(self.far_x - self.robot.base.status['x'])**2)
-
-        ## commented for debugging
-        # print('far dist vals:', far_dist, self.far_to_origin)
-        # if(far_dist <= self.far_to_origin):
-        ## commented for debugging
-
         self.joints["joint_fake"] = origin_dist
-        ## commented for debugging
-        # else:
-        #     self.joints['joints_fake'] = -1*origin_dist
-        ## commented for debugging
-
         self.joints["joint_lift"] = self.robot.lift.status["pos"]
 
         armPos = self.robot.arm.status["pos"]
@@ -221,9 +211,6 @@ class HelloRobot:
         self.joints["joint_wrist_pitch"] = OVERRIDE_STATES.get(
             "wrist_pitch", self.robot.end_of_arm.status["wrist_pitch"]["pos"]
         )
-        # self.joints["joint_wrist_pitch"] = self.robot.end_of_arm.status["wrist_pitch"]["pos"]
-        # print("1:", OVERRIDE_STATES["wrist_pitch"])
-        # print("2:", self.robot.end_of_arm.status["wrist_pitch"]["pos"])
 
         self.joints["joint_stretch_gripper"] = self.robot.end_of_arm.status[
             "stretch_gripper"
@@ -333,16 +320,7 @@ class HelloRobot:
         ik_joints = {}
 
         for joint_index in range(self.joint_array.rows()):
-            # print(joint_index)
-            # print(joint_list[joint_index])
             ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
-
-        # print('ik_joints', ik_joints)
-        # test_pose = PyKDL.Frame()
-        # self.fk_p_kdl.JntToCart(self.joint_array, test_pose)
-
-        # # print(test_pose.p)
-        # # print(test_pose.M.GetRPY())
 
         self.move_to_joints(ik_joints, gripper)
 

@@ -1,58 +1,20 @@
-from camera import R3DApp, ImagePublisher
-from robot import Listner, HelloRobot
-import cv2
-from multiprocessing import Process, Value
-import signal
-import sys
-import time
+import hydra
+from initializers import Start_Server
 
+@hydra.main(config_path="configs", config_name="start_server", version_base="1.2")
+def main(cfg):
+    """
+    Main function to start the server
+    """
+    #Start the server
+    server = Start_Server(cfg)
+    processes = server.get_processes()
 
-def camera_process(app):
-    camera_publisher = ImagePublisher(app)
-    camera_publisher.publish_image_from_camera()
-
-
-def robot_process(hello_robot):
-    print("robot process started")
-    listner = Listner(hello_robot)
-    listner.start()
-
-
-def stream_manager():
-    app = R3DApp()
-    while app.stream_stopped:
-        try:
-            app.connect_to_device(dev_idx=0)
-        except RuntimeError as e:
-            print(e)
-            print(
-                "Retrying to connect to device with id {idx}, make sure the device is connected and id is correct...".format(
-                    idx=0
-                )
-            )
-            time.sleep(2)
-
-    try:
-        camera_process(app)
-    except cv2.error as e:
-        print(e)
-        print(
-            "The device was connected but the stream didn't start, trying to reconnect..."
-        )
-        time.sleep(2)
-        stream_manager()
-
-    while not app.stream_stopped:
-        time.sleep(2)
-
-    stream_manager()
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join()
+    print("Server started")
 
 if __name__ == "__main__":
-    t2 = Process(target=robot_process, args=(None,))
-    t2.start()
-    def signal_handler(sig, frame):
-        t2.terminate()
-        sys.exit(0)
-    signal.signal(signal.SIGINT, signal_handler)
-    stream_manager()
-
+    main()

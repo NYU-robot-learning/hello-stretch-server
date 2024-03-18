@@ -1,0 +1,4 @@
+host_address: "10.19.241.253"
+camera_port: 32922
+action_port: 8081
+flag_port: 2828
