@@ -58,7 +58,6 @@ class Listener(ProcessInstantiator):
         self.hello_robot.move_to_pose(
             translation_tensor, rotational_tensor, gripper_tensor
         )
-        time.sleep(2) # TODO: make blocking to remove the sleep
     
     # wait for flag to before waiting for action
     def _wait_for_flag(self):
