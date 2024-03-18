@@ -8,11 +8,11 @@ import PyKDL
 import stretch_body.robot
 from scipy.spatial.transform import Rotation as R
 from urdf_parser_py.urdf import URDF
-from normalized_velocity_control import NormalizedVelocityControl, zero_vel
+from .normalized_velocity_control import NormalizedVelocityControl, zero_vel
 from numpy.linalg import norm
 import numpy as np
 
-from utils import kdl_tree_from_urdf_model
+from .utils import kdl_tree_from_urdf_model
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -55,12 +55,12 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file: str = "stretch_nobase_raised.urdf",
-        stretch_gripper_max: Union[float, int] = 120,
+        stretch_gripper_max: Union[float, int] = 40,
         stretch_gripper_min: Union[float, int] = 0,
-        gripper_threshold: Union[float, int] = 0.3*120,
-        stretch_gripper_tight: Union[float, int] = -20,
+        gripper_threshold: Union[float, int] = 0.3*40,
+        stretch_gripper_tight: Union[float, int] = -10,
         sticky_gripper: bool = False,
-        gripper_threshold_post_grasp: Union[float, int] = 0.6*120,
+        gripper_threshold_post_grasp: Union[float, int] = 0.6*40,
     ):
         self.logger = logging.Logger("hello_robot")
         self.logger.setLevel(logging.INFO)
@@ -96,9 +96,11 @@ class HelloRobot:
         self.robot = stretch_body.robot.Robot()
         self.startup()
 
-        # Initializing the robot base position
-        self.base_x = self.robot.base.status["x"]
-        self.base_y = self.robot.base.status["y"]
+        self.base_x = -1000 # TODO: fix this issue
+        self.base_y = -1000 # TODO: fix this issue
+        self.delta_translation_threshold = 0.01 # TODO: remove hardcoding
+        self.delta_rotation_threshold = 0.1 # TODO: remove hardcoding
+        self.gripper_delta_threshold = 5 # TODO: remove hardcoding
 
         time.sleep(1)
 
@@ -114,6 +116,12 @@ class HelloRobot:
 
     def startup(self, home=False):
         self.robot.startup()
+        self.robot.end_of_arm.motors["wrist_yaw"].set_soft_motion_limit_min(-0.4)
+        self.robot.end_of_arm.motors["wrist_yaw"].set_soft_motion_limit_max(1.5)
+        self.robot.end_of_arm.motors["wrist_pitch"].set_soft_motion_limit_max(-0.5)
+        self.robot.end_of_arm.motors["wrist_pitch"].set_soft_motion_limit_max(0.2)
+        self.robot.end_of_arm.motors["wrist_roll"].set_soft_motion_limit_max(-0.5)
+        self.robot.end_of_arm.motors["wrist_roll"].set_soft_motion_limit_max(0.5)
 
         self.robot.arm.motor.enable_sync_mode()
         self.robot.base.left_wheel.enable_sync_mode()
@@ -163,7 +171,7 @@ class HelloRobot:
 
     def set_home_position(
         self,
-        lift=0.7,
+        lift=0.66,
         arm=0.02,
         base=0.0,
         wrist_yaw=0.0,
@@ -251,27 +259,36 @@ class HelloRobot:
         return lift_pos, base_pos, arm_pos, gripper_pos
 
 
-    # TODO: add safety limits for rotation
+    # TODO
+    def clamp(self, ik_joints):
+        # clip to limits
+        pass
 
     def get_action(self, ik_joints, orig_translation_norm):
         lift_pos, base_pos, arm_pos, gripper_pos = self.getJointPos() # Get current state of life, base, arm, and gripper
-        
+
         action = np.array(
             [ik_joints["joint_lift"]-lift_pos, 
             ik_joints["joint_fake"]-base_pos, 
-            ik_joints["joint_arm_l0"]*4-arm_pos, 
+            max(ik_joints["joint_arm_l0"]*4, 0)-arm_pos, 
+            ik_joints["joint_wrist_yaw"]-self.robot.end_of_arm.status["wrist_yaw"]["pos"],
+            ik_joints["joint_wrist_pitch"]-self.robot.end_of_arm.status["wrist_pitch"]["pos"],
+            ik_joints["joint_wrist_roll"]-self.robot.end_of_arm.status["wrist_roll"]["pos"],
             (ik_joints["gripper"]-gripper_pos)/self.STRETCH_GRIPPER_MAX]
         ) # Use relative position as velocity
 
-        if abs(ik_joints["gripper"]-gripper_pos) < 10: #TODO: Remove hardcoding
-            action[3] = 0
-
+        
         residual_translation_norm = norm(action[:3])
         if orig_translation_norm is not None:
             action[:3] = (action[:3]/residual_translation_norm)*orig_translation_norm # Scale norm of residual translation to that of original action, to prevent action from going to 0. 
+        if abs(ik_joints["gripper"]-gripper_pos) < self.gripper_delta_threshold: 
+            action[-1] = 0
 
-        self.delta = residual_translation_norm
-        self.gripper_delta = ik_joints["gripper"]-gripper_pos
+        residual_rotation_norm = norm(action[3:6])
+        self.delta_translation = residual_translation_norm
+        self.delta_rotation = residual_rotation_norm
+
+        self.gripper_delta = ik_joints["gripper"] - gripper_pos
 
         return action
         
@@ -309,9 +326,9 @@ class HelloRobot:
             ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
 
         # TODO add rotational velocity control
-        ik_joints["joint_wrist_roll"] = 0
-        ik_joints["joint_wrist_yaw"] = 0
-        ik_joints["joint_wrist_pitch"] = 0
+        # ik_joints["joint_wrist_roll"] = 0
+        # ik_joints["joint_wrist_yaw"] = 0
+        # ik_joints["joint_wrist_pitch"] = 0
 
         self.CURRENT_STATE = (
             gripper[0] * (self.STRETCH_GRIPPER_MAX - self.STRETCH_GRIPPER_MIN)
@@ -327,20 +344,25 @@ class HelloRobot:
         action = self.get_action(ik_joints, None)
 
         orig_translation_norm = np.clip(norm(action[:3]), 0.01, 0.1) #TODO: Remove hardcoding
-        self.delta = 1 #TODO: Remove hardcoding
+        self.delta_translation = 1 #TODO: Remove hardcoding
+        self.delta_rotation = 1 #TODO: Remove hardcoding
         self.gripper_delta = float('inf') #TODO: Remove hardcoding
         self.vf = 5 # TODO: Remove hardcoding, (velocity factor)
-        while self.delta > 0.01 or abs(self.gripper_delta) > 10: #TODO: Remove hardcoding. Continue to next action when position has reach close enough to desired position. 
-            
+        while self.delta_translation > self.delta_translation_threshold or self.delta_rotation > self.delta_rotation_threshold or abs(self.gripper_delta) > self.gripper_delta_threshold: # Continue to next action when position has reach close enough to desired position. 
+
             self.controller.set_command({
                 "lift_up": action[0]*self.vf, 
                 "base_forward": action[1]*self.vf, 
                 "arm_out": action[2]*self.vf, 
-                "gripper_open": action[3]}
+                "wrist_yaw_counterclockwise": action[3], 
+                "wrist_pitch_up": action[4], 
+                "wrist_roll_counterclockwise": action[5], 
+                "gripper_open": action[6]}
             )
 
             time.sleep(0.1)
 
             action = self.get_action(ik_joints, orig_translation_norm)
 
-            print(action, self.delta)
+        # self.controller.set_command(zero_vel)
+        print(ik_joints, self.getJointPos())
