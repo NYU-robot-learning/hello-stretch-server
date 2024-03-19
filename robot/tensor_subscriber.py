@@ -19,5 +19,10 @@ class TensorSubscriber(object):
             port=configs['action_port'],
             topic="params",
         )
+        self.zero_velocity_subscriber = ZMQKeypointSubscriber(
+            host=configs['host'],
+            port=configs['action_port'],
+            topic="zero",
+        )
         # create the ZMQ response socket for flag
         self.flag_socket = create_response_socket(host=configs['host'], port=configs['flag_port'])

@@ -65,20 +65,19 @@ class HelloRobot:
         self.logger = logging.Logger("hello_robot")
         self.logger.setLevel(logging.INFO)
 
-        self.STRETCH_GRIPPER_MAX = stretch_gripper_max
-        self.STRETCH_GRIPPER_MIN = stretch_gripper_min
-        self.STRETCH_GRIPPER_TIGHT = stretch_gripper_tight
+        self.STRETCH_GRIPPER_MAX = 51
+        self.STRETCH_GRIPPER_MIN = 0
+        self.STRETCH_GRIPPER_TIGHT = -10
         self._has_gripped = False
-        self._sticky_gripper = sticky_gripper
+        self._sticky_gripper = False
         self.urdf_file = urdf_file
+        self.first_step = 1
 
         self.urdf_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "urdf", self.urdf_file
         )
-        self.GRIPPER_THRESHOLD = gripper_threshold
-        self.GRIPPER_THRESHOLD_POST_GRASP = (
-            gripper_threshold_post_grasp or gripper_threshold
-        )
+        self.GRIPPER_THRESHOLD = 0.6*51
+        self.GRIPPER_THRESHOLD_POST_GRASP = 0.4*51
 
         # Initializing ROS node
         self.joint_list = [
@@ -199,6 +198,7 @@ class HelloRobot:
             self.home_wrist_roll,
             self.home_gripper,
         )
+        self.first_step = 1
 
     def setup_kdl(self):
         self.joints = {"joint_fake": 0}
@@ -301,7 +301,9 @@ class HelloRobot:
         ]
         rotation = rotational_tensor
 
-        self.updateJoints()
+        if self.first_step == 1:
+            self.updateJoints()
+        
         for joint_index in range(self.joint_array.rows()):
             self.joint_array[joint_index] = self.joints[self.joint_list[joint_index]]
 
@@ -347,7 +349,7 @@ class HelloRobot:
         self.delta_translation = 1 #TODO: Remove hardcoding
         self.delta_rotation = 1 #TODO: Remove hardcoding
         self.gripper_delta = float('inf') #TODO: Remove hardcoding
-        self.vf = 5 # TODO: Remove hardcoding, (velocity factor)
+        self.vf = 7 # TODO: Remove hardcoding, (velocity factor)
         while self.delta_translation > self.delta_translation_threshold or self.delta_rotation > self.delta_rotation_threshold or abs(self.gripper_delta) > self.gripper_delta_threshold: # Continue to next action when position has reach close enough to desired position. 
 
             self.controller.set_command({
@@ -357,12 +359,13 @@ class HelloRobot:
                 "wrist_yaw_counterclockwise": action[3], 
                 "wrist_pitch_up": action[4], 
                 "wrist_roll_counterclockwise": action[5], 
-                "gripper_open": action[6]}
+                "gripper_open": action[6]*2}
             )
 
             time.sleep(0.1)
 
             action = self.get_action(ik_joints, orig_translation_norm)
 
-        # self.controller.set_command(zero_vel)
-        print(ik_joints, self.getJointPos())
+        self.first_step = 0
+        self.updateJoints()
+        

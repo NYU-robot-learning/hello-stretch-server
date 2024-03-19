@@ -1,5 +1,6 @@
 from .tensor_subscriber import TensorSubscriber
 from .hello_robot import HelloRobot
+from .normalized_velocity_control import zero_vel
 
 import time
 import zmq
@@ -38,6 +39,10 @@ class Listener(ProcessInstantiator):
             if home_params is not None:
                 self._handle_action("home_params", home_params)
                 return
+            zero_velocity = self.tensor_subscriber.zero_velocity_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
+            if zero_velocity is not None:
+                self._handle_action("zero_velocity", zero_velocity)
+                return
 
     def _handle_action(self, instruction, data):
         if instruction == "robot_action":
@@ -46,6 +51,8 @@ class Listener(ProcessInstantiator):
             self.hello_robot.home()
         elif instruction == "home_params":
             self.hello_robot.set_home_position(*data)
+        elif instruction == "zero_velocity":
+            self.hello_robot.controller.set_command(zero_vel)
     
     # execute the robot action given by policy
     def _execute_robot_action(self, action):
@@ -58,6 +65,7 @@ class Listener(ProcessInstantiator):
         self.hello_robot.move_to_pose(
             translation_tensor, rotational_tensor, gripper_tensor
         )
+        # print(time.time())
     
     # wait for flag to before waiting for action
     def _wait_for_flag(self):
