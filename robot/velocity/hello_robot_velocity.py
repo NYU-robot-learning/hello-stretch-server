@@ -66,19 +66,19 @@ class HelloRobot:
         self.logger = logging.Logger("hello_robot")
         self.logger.setLevel(logging.INFO)
 
-        self.STRETCH_GRIPPER_MAX = 51
-        self.STRETCH_GRIPPER_MIN = 0
-        self.STRETCH_GRIPPER_TIGHT = -10
+        self.STRETCH_GRIPPER_MAX = stretch_gripper_max
+        self.STRETCH_GRIPPER_MIN = stretch_gripper_min
+        self.STRETCH_GRIPPER_TIGHT = stretch_gripper_tight
         self._has_gripped = False
-        self._sticky_gripper = False
+        self._sticky_gripper = sticky_gripper
         self.urdf_file = urdf_file
-        self.first_step = 1
+        self.first_step = True
 
         self.urdf_path = os.path.join(
             str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
-        self.GRIPPER_THRESHOLD = 0.6*51
-        self.GRIPPER_THRESHOLD_POST_GRASP = 0.4*51
+        self.GRIPPER_THRESHOLD = gripper_threshold
+        self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp
 
         # Initializing ROS node
         self.joint_list = [
@@ -199,7 +199,7 @@ class HelloRobot:
             self.home_wrist_roll,
             self.home_gripper,
         )
-        self.first_step = 1
+        self.first_step = True
 
     def setup_kdl(self):
         self.joints = {"joint_fake": 0}
@@ -302,7 +302,7 @@ class HelloRobot:
         ]
         rotation = rotational_tensor
 
-        if self.first_step == 1:
+        if self.first_step:
             self.updateJoints()
         
         for joint_index in range(self.joint_array.rows()):
@@ -367,6 +367,6 @@ class HelloRobot:
 
             action = self.get_action(ik_joints, orig_translation_norm)
 
-        self.first_step = 0
+        self.first_step = False
         self.updateJoints()
         
