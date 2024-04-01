@@ -3,7 +3,7 @@ from robot.zmq_utils import *
 import hydra
 
 
-class Start_Server(ProcessInstantiator):
+class StartServer(ProcessInstantiator):
     """
     Returns all the teleoperation processes. Start the list of processes 
     to run the teleop.
