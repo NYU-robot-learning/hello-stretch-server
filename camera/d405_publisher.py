@@ -18,6 +18,7 @@ SEQ_PUBLISHER_NAME = "/gopro_seq"
 D405_COLOR_SIZE = [640, 480]
 D405_DEPTH_SIZE = [640, 480]
 RESIZED_IMAGE = (256, 256)
+RESIZED_DEPTH = (256, 192)
 D405_FPS = 15
 
 
@@ -75,9 +76,10 @@ def setup_realsense_camera(serial_number, color_size, depth_size, fps):
 
 # class D405ImagePublisher(ProcessInstantiator):
 class D405ImagePublisher:
-    def __init__(self, host, port):
-        self.host=host
-        self.port=port
+    def __init__(self, host, port, use_depth):
+        self.host = host
+        self.port = port
+        self.use_depth = use_depth
 
         self.rgb_publisher = ZMQCameraPublisher(
             host = self.host, 
@@ -109,14 +111,20 @@ class D405ImagePublisher:
 
             image = cv2.resize(image, dsize=RESIZED_IMAGE, interpolation=cv2.INTER_CUBIC)
             # print(depth.min(), depth.max(), depth.shape)
-            depth = np.ascontiguousarray(depth).astype(np.uint16)
-            resized_depth = cv2.resize(depth, RESIZED_IMAGE,  interpolation = cv2.INTER_NEAREST) 
-            depth_processed = (resized_depth * 0.0001).astype(np.float32)
 
-            cv2.imshow("D405 Depth pre", resized_depth)
-            cv2.imshow("D405", image)
-            
-            self.rgb_publisher.pub_image_and_depth(image, depth_processed, time.time())
+            if self.use_depth:
+                depth = np.ascontiguousarray(depth).astype(np.uint16)
+                resized_depth = cv2.resize(depth, RESIZED_DEPTH,  interpolation = cv2.INTER_NEAREST) 
+                depth_processed = (resized_depth * 0.0001).astype(np.float32)
+
+                cv2.imshow("D405 Depth pre", resized_depth)
+                cv2.imshow("D405", image)
+                
+                self.rgb_publisher.pub_image_and_depth(image, depth_processed, time.time())
+            else:
+                cv2.imshow("D405", image)
+                
+                self.rgb_publisher.pub_rgb_image(image, time.time())
 
             self._seq += 1
 
