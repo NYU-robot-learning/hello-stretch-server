@@ -174,6 +174,7 @@ def manage_head(robot, controller_state):
 # ######################### BASE ########################################
 # Regular Motion
 dead_zone = 0.1  # 0.25 #0.1 #0.2 #0.3 #0.4
+# Change 2 values below for increasing/decreasing translation velocity
 move_s = 0.1
 max_dist_m = 0.01  # 0.04 #0.05
 accel_m = 0.2  # 0.1
