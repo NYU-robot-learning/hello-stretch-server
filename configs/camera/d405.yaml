@@ -1,0 +1,3 @@
+_target_: camera.d405_publisher.D405ImagePublisher
+host: ${host_address}
+port: ${camera_port}
