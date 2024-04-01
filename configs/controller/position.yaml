@@ -1,4 +1,4 @@
-_target_: robot.listener.Listener
+_target_: robot.position.listener.Listener
 host: ${network.host_address}
 hello_robot: null
 gripper_safety_limits: [-1.0, 1.0]

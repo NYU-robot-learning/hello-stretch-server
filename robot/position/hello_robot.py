@@ -1,7 +1,7 @@
 import stretch_body.robot
 import numpy as np
 import PyKDL
-import rospy
+from pathlib import Path
 
 # from baxter_kdl.kdl_parser import kdl_tree_from_urdf_model
 from urdf_parser_py.urdf import URDF
@@ -10,13 +10,7 @@ import math
 import time
 import random
 import os
-from .utils import (
-    euler_to_quat,
-    urdf_joint_to_kdl_joint,
-    urdf_pose_to_kdl_frame,
-    urdf_inertial_to_kdl_rbi,
-    kdl_tree_from_urdf_model,
-)
+from ..utils import kdl_tree_from_urdf_model
 
 
 pick_place = [38.0, 15, 47]  # 15 looks wrong
@@ -45,7 +39,7 @@ class HelloRobot:
         self.threshold_count = 0
 
         self.urdf_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "urdf", self.urdf_file
+            str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
         self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list
@@ -62,10 +56,6 @@ class HelloRobot:
             "joint_wrist_pitch",
             "joint_wrist_roll",
         ]
-        try:
-            rospy.init_node("hello_robot_node")
-        except:
-            print("node already initialized")
 
         self.robot = stretch_body.robot.Robot()
         self.startup()

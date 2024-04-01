@@ -1,5 +1,5 @@
 import numpy as np
-from .zmq_utils import *
+from ..zmq_utils import *
 
 class TensorSubscriber(object):
     def __init__(self,configs):

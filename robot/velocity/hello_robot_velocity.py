@@ -3,6 +3,7 @@ import math
 import os
 import time
 from typing import Union
+from pathlib import Path
 
 import PyKDL
 import stretch_body.robot
@@ -12,7 +13,7 @@ from .normalized_velocity_control import NormalizedVelocityControl, zero_vel
 from numpy.linalg import norm
 import numpy as np
 
-from .utils import kdl_tree_from_urdf_model
+from ..utils import kdl_tree_from_urdf_model
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -74,7 +75,7 @@ class HelloRobot:
         self.first_step = 1
 
         self.urdf_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "urdf", self.urdf_file
+            str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
         self.GRIPPER_THRESHOLD = 0.6*51
         self.GRIPPER_THRESHOLD_POST_GRASP = 0.4*51
