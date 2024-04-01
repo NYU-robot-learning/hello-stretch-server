@@ -1,5 +1,5 @@
-from .tensor_subscriber import TensorSubscriber
-from .hello_robot import HelloRobot
+from .tensor_subscriber_velocity import TensorSubscriber
+from .hello_robot_velocity import HelloRobot
 from .normalized_velocity_control import zero_vel
 
 import time
