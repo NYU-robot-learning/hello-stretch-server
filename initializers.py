@@ -32,5 +32,5 @@ class Start_Server(ProcessInstantiator):
     def _init_robot_process(self):
         self.processes.append(Process(
             target = self._start_component,
-            args = (self.configs.robot, )
+            args = (self.configs.controller, )
         ))

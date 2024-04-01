@@ -1,6 +1,5 @@
 import zmq
 import cv2
-import base64
 import numpy as np
 import pickle
 import blosc as bl
@@ -92,7 +91,7 @@ class ZMQKeypointSubscriber(threading.Thread):
         self.context.term()
 
 # Pub/Sub classes for storing data from Realsense Cameras
-class ZMQCameraPublisher(object):
+class ZMQCameraPublisher:
     def __init__(self, host, port):
         self._host, self._port = host, port
         self._init_publisher()
@@ -100,31 +99,38 @@ class ZMQCameraPublisher(object):
     def _init_publisher(self):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        print('tcp://{}:{}'.format(self._host, self._port))
-        self.socket.bind('tcp://{}:{}'.format(self._host, self._port))
-
+        print("tcp://{}:{}".format(self._host, self._port))
+        self.socket.bind("tcp://{}:{}".format(self._host, self._port))
 
     def pub_intrinsics(self, array):
-        self.socket.send(b"intrinsics " + pickle.dumps(array, protocol = -1))
+        self.socket.send(b"intrinsics " + pickle.dumps(array, protocol=-1))
 
     def pub_rgb_image(self, rgb_image, timestamp):
-        _, buffer = cv2.imencode('.jpg', rgb_image, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
-        data = dict(
-            timestamp = timestamp,
-            rgb_image = base64.b64encode(buffer)
-        )
-        self.socket.send(b"rgb_image " + pickle.dumps(data, protocol = -1))
+        _, buffer = cv2.imencode(".jpg", rgb_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        data = dict(timestamp=timestamp, rgb_image=buffer.tobytes())
+        self.socket.send(b"rgb_image " + pickle.dumps(data, protocol=-1))
 
     def pub_depth_image(self, depth_image, timestamp):
-        compressed_depth = bl.pack_array(depth_image, cname = 'zstd', clevel = 1, shuffle = bl.NOSHUFFLE)
-        data = dict(
-            timestamp = timestamp,
-            depth_image = compressed_depth
+        compressed_depth = bl.pack_array(
+            depth_image, cname="zstd", clevel=1, shuffle=bl.NOSHUFFLE
         )
-        self.socket.send(b"depth_image " + pickle.dumps(data, protocol = -1))
+        data = dict(timestamp=timestamp, depth_image=compressed_depth)
+        self.socket.send(b"depth_image " + pickle.dumps(data, protocol=-1))
+
+    def pub_image_and_depth(self, rgb_image, depth_image, timestamp):
+        _, buffer = cv2.imencode(".jpg", rgb_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        compressed_depth = bl.pack_array(
+            depth_image, cname="zstd", clevel=1, shuffle=bl.NOSHUFFLE
+        )
+        data = dict(
+            timestamp=timestamp,
+            rgb_image=buffer.tobytes(),
+            depth_image=compressed_depth,
+        )
+        self.socket.send(b"image_and_depth " + pickle.dumps(data, protocol=-1))
 
     def stop(self):
-        print('Closing the publisher socket in {}:{}.'.format(self._host, self._port))
+        print("Closing the publisher socket in {}:{}.".format(self._host, self._port))
         self.socket.close()
         self.context.term()
 
@@ -137,15 +143,17 @@ class ZMQCameraSubscriber(threading.Thread):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
         self.socket.setsockopt(zmq.CONFLATE, 1)
-        print('tcp://{}:{}'.format(self._host, self._port))
-        self.socket.connect('tcp://{}:{}'.format(self._host, self._port))
+        print("tcp://{}:{}".format(self._host, self._port))
+        self.socket.connect("tcp://{}:{}".format(self._host, self._port))
 
-        if self._topic_type == 'Intrinsics':
+        if self._topic_type == "Intrinsics":
             self.socket.setsockopt(zmq.SUBSCRIBE, b"intrinsics")
-        elif self._topic_type == 'RGB':
+        elif self._topic_type == "RGB":
             self.socket.setsockopt(zmq.SUBSCRIBE, b"rgb_image")
-        elif self._topic_type == 'Depth':
+        elif self._topic_type == "Depth":
             self.socket.setsockopt(zmq.SUBSCRIBE, b"depth_image")
+        elif self._topic_type == "RGBD":
+            self.socket.setsockopt(zmq.SUBSCRIBE, b"image_and_depth")
 
     def recv_intrinsics(self):
         raw_data = self.socket.recv()
@@ -156,18 +164,28 @@ class ZMQCameraSubscriber(threading.Thread):
         raw_data = self.socket.recv()
         data = raw_data.lstrip(b"rgb_image ")
         data = pickle.loads(data)
-        encoded_data = np.fromstring(base64.b64decode(data['rgb_image']), np.uint8)
-        return cv2.imdecode(encoded_data, 1), data['timestamp']
-        
+        encoded_data = np.frombuffer(data["rgb_image"], np.uint8)
+        return cv2.imdecode(encoded_data, 1), data["timestamp"]
+
     def recv_depth_image(self):
         raw_data = self.socket.recv()
         striped_data = raw_data.lstrip(b"depth_image ")
         data = pickle.loads(striped_data)
-        depth_image = bl.unpack_array(data['depth_image'])
-        return np.array(depth_image, dtype = np.int16), data['timestamp']
-        
+        depth_image = bl.unpack_array(data["depth_image"])
+        return np.array(depth_image, dtype=np.float32), data["timestamp"]
+
+    def recv_image_and_depth(self):
+        raw_data = self.socket.recv()
+        striped_data = raw_data.lstrip(b"image_and_depth ")
+        data = pickle.loads(striped_data)
+        encoded_data = np.frombuffer(data["rgb_image"], np.uint8)
+        rgb_image = cv2.imdecode(encoded_data, 1)
+        depth_image = bl.unpack_array(data["depth_image"])
+        # Float32 because this is metric depth.
+        return rgb_image, np.array(depth_image, dtype=np.float32), data["timestamp"]
+
     def stop(self):
-        print('Closing the subscriber socket in {}:{}.'.format(self._host, self._port))
+        print("Closing the subscriber socket in {}:{}.".format(self._host, self._port))
         self.socket.close()
         self.context.term()
 
@@ -221,7 +239,7 @@ class ZMQCompressedImageReciever(threading.Thread):
         encoded_data = np.fromstring(raw_data, np.uint8)
         decoded_frame = cv2.imdecode(encoded_data, 1)
         return decoded_frame
-        
+
     def stop(self):
         print('Closing the subscriber socket in {}:{}.'.format(self._host, self._port))
         self.socket.close()
