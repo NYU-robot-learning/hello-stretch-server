@@ -56,12 +56,12 @@ class HelloRobot:
     def __init__(
         self,
         urdf_file: str = "stretch_nobase_raised.urdf",
-        stretch_gripper_max: Union[float, int] = 40,
+        stretch_gripper_max: Union[float, int] = 51,
         stretch_gripper_min: Union[float, int] = 0,
-        gripper_threshold: Union[float, int] = 0.3*40,
+        gripper_threshold: Union[float, int] = 0.55*51,
         stretch_gripper_tight: Union[float, int] = -10,
         sticky_gripper: bool = False,
-        gripper_threshold_post_grasp: Union[float, int] = 0.6*40,
+        gripper_threshold_post_grasp: Union[float, int] = 0.5*51,
     ):
         self.logger = logging.Logger("hello_robot")
         self.logger.setLevel(logging.INFO)
@@ -78,7 +78,7 @@ class HelloRobot:
             str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
-        self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp
+        self.GRIPPER_THRESHOLD_POST_GRASP = gripper_threshold_post_grasp
 
         # Initializing ROS node
         self.joint_list = [
