@@ -24,11 +24,11 @@ class HelloRobot:
         self,
         urdf_file="stretch_nobase_raised.urdf",
         gripper_threshold=7, # unused
-        stretch_gripper_max=51,
+        stretch_gripper_max=30,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-10],
-        sticky_gripper=False,
-        gripper_threshold_post_grasp_list=[0.6*51, 0.4*51],
+        stretch_gripper_tight=[-25],
+        sticky_gripper=True,
+        gripper_threshold_post_grasp_list=[0.25*30, 0.5*30],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -259,19 +259,46 @@ class HelloRobot:
         print("Gripper state after update:", self.GRIPPER_THRESHOLD)
 
         if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
-            self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT[self.threshold_count//2])
+            self.gripper = self.STRETCH_GRIPPER_TIGHT[self.threshold_count//2]
+            self.robot.end_of_arm.move_to("stretch_gripper", self.gripper)
             if not self._has_gripped:
                 self.threshold_count += 1
             self._has_gripped = True
         else:
-            self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
+            self.gripper = self.STRETCH_GRIPPER_MAX
+            self.robot.end_of_arm.move_to('stretch_gripper', self.gripper)
             if self._has_gripped:
                 self.threshold_count += 1
             self._has_gripped = False
         self.robot.push_command()
 
-        # sleeping to make sure all the joints are updated correctly (remove if not necessary)
-        # time.sleep(.7)
+
+    def getJointPos(self):
+        lift_pos = self.robot.lift.status["pos"]
+        base_pos = math.sqrt((self.base_y - self.robot.base.status["y"]) ** 2 + (self.base_x - self.robot.base.status["x"]) ** 2)
+        arm_pos = self.robot.arm.status["pos"]
+        gripper_pos = self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"]
+
+        return lift_pos, base_pos, arm_pos, gripper_pos
+
+    def has_reached(self, ik_joints, gripper):
+        lift_pos, base_pos, arm_pos, gripper_pos = self.getJointPos() # Get current state of life, base, arm, and gripper
+
+        delta = np.array(
+            [ik_joints["joint_lift"]-lift_pos, 
+            ik_joints["joint_fake"]-base_pos, 
+            max(ik_joints["joint_arm_l0"]*4, 0)-arm_pos, 
+            (self.gripper-gripper_pos)/self.STRETCH_GRIPPER_MAX]
+        )
+        
+        # print(self.gripper, gripper_pos, self.STRETCH_GRIPPER_MAX)
+        print(delta)
+
+        delta_norm = np.linalg.norm(delta[:3])
+
+        print(delta_norm)
+
+        return delta_norm < 0.03 and delta[-1] < 0.2
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         translation = [
@@ -314,7 +341,11 @@ class HelloRobot:
 
         self.move_to_joints(ik_joints, gripper)
 
-        self.robot.push_command()
+        reached = False
+        while not reached:
+            reached = self.has_reached(ik_joints, gripper)
+        
+        time.sleep(0.3)
 
         self.updateJoints()
         for joint_index in range(self.joint_array.rows()):
