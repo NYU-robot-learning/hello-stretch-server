@@ -34,3 +34,26 @@ class StartServer(ProcessInstantiator):
             target = self._start_component,
             args = (self.configs.controller, )
         ))
+
+class StickTeleop(ProcessInstantiator):
+    """
+    Returns all the teleoperation processes. Start the list of processes 
+    to run the teleop.
+    """
+    def __init__(self, configs):
+        super().__init__()
+        self.configs=configs
+      
+        self._init_camera_process()
+        
+    #Function to start the components
+    def _start_component(self, configs):
+        component = hydra.utils.instantiate(configs)
+        component.stream()
+
+    #Function to start camera process
+    def _init_camera_process(self):
+        self.processes.append(Process(
+            target = self._start_component,
+            args = (self.configs.camera, )
+        ))
