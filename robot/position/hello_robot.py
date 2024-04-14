@@ -17,6 +17,7 @@ pick_place = [38.0, 15, 47]  # 15 looks wrong
 pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
+MAX_RETRIES = 50
 
 
 class HelloRobot:
@@ -24,11 +25,11 @@ class HelloRobot:
         self,
         urdf_file="stretch_nobase_raised.urdf",
         gripper_threshold=7, # unused
-        stretch_gripper_max=30,
+        stretch_gripper_max=50,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-25],
+        stretch_gripper_tight=[-40],
         sticky_gripper=True,
-        gripper_threshold_post_grasp_list=[0.25*30, 0.5*30],
+        gripper_threshold_post_grasp_list=[0.6*50, 0.5*25],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -339,11 +340,20 @@ class HelloRobot:
         for joint_index in range(self.joint_array.rows()):
             ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
 
+        # ik_joints["joint_wrist_roll"] = 0
+        # ik_joints["joint_wrist_pitch"] = 0
+        # ik_joints["joint_wrist_yaw"] = 0
         self.move_to_joints(ik_joints, gripper)
 
         reached = False
+        checks = 0
         while not reached:
             reached = self.has_reached(ik_joints, gripper)
+            time.sleep(0.1)
+
+            if checks > MAX_RETRIES:
+                print("Failed to reach within 3cm of desired position")
+                break
         
         time.sleep(0.3)
 
