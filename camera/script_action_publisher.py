@@ -105,7 +105,7 @@ class R3DCamera(ProcessInstantiator):
 
                 gripper = self.capture_image_gripper()
 
-                if instruction == "c":
+                if len(instruction) == 0:
                     gripper_action = random.uniform(-30, -10)
                     self.hello_robot.move_gripper(gripper_action)
                     

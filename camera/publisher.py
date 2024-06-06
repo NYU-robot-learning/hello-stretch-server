@@ -2,6 +2,7 @@ from camera.demo import R3DApp
 import cv2
 import time
 from robot.zmq_utils import *
+import os
     
 class R3DCameraPublisher(ProcessInstantiator):
     def __init__(self, host, port, use_depth):
@@ -70,3 +71,11 @@ class R3DCameraPublisher(ProcessInstantiator):
                     image, pose = self.get_rgb_depth_images()
                     self.rgb_publisher.pub_rgb_image(image, time.time())
                 self.timer.end_loop()
+
+                if "DISPLAY" in os.environ:
+                    cv2.imshow("iPhone", image)
+            
+                if cv2.waitKey(1) == 27:
+                    break
+        
+        cv2.destroyAllWindows()
