@@ -1,6 +1,18 @@
 import numpy as np
 import PyKDL
+from scipy.spatial.transform import Rotation as R
 
+def create_transform(vec):
+    x,y,z,rx,ry,rz = vec
+    transform = np.eye(4)
+    transform[:3,:3] = R.from_euler('xyz', [rx,ry,rz], degrees=True).as_matrix()
+    transform[:3,3] = [x,y,z]
+    return transform
+
+def transform_to_vec(transform):
+    x,y,z = transform[:3,3]
+    rx,ry,rz = R.from_matrix(transform[:3,:3]).as_euler('xyz', degrees=True)
+    return [x,y,z,rx,ry,rz]
 
 def euler_to_quat(r, p, y):
     sr, sp, sy = np.sin(r / 2.0), np.sin(p / 2.0), np.sin(y / 2.0)

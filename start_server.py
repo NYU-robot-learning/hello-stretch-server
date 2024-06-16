@@ -14,15 +14,18 @@ def main(cfg):
 
     for process in processes:
         process.start()
-    for process in processes:
-        process.join()
-    print("Server started")
-
+        
     def signal_handler(sig, frame):
         for process in processes:
             process.terminate()
         sys.exit(0)
-    signal.signal(signal.SIGINT, signal_handler)
+    
+    try:
+        for process in processes:
+            process.join()
+        print("Server started")
+    except KeyboardInterrupt:
+        signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
     main()
