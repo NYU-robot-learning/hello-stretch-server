@@ -19,7 +19,7 @@ class TensorSubscriber(object):
             port=configs['action_port'],
             topic="params",
         )
-        self.disable_gripper_subscriber = ZMQKeypointSubscriber(
+        self.quit_subscriber = ZMQKeypointSubscriber(
             host=configs['remote'],
             port=configs['action_port'],
             topic="quit",

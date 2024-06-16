@@ -32,13 +32,13 @@ class Listener(ProcessInstantiator):
             home = self.tensor_subscriber.home_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
             if home is not None:
                 print('received home')
-                self._handle_action("home", None)
+                self._handle_action("home")
                 return
             home_params = self.tensor_subscriber.home_params_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
             if home_params is not None:
                 self._handle_action("home_params", data=home_params)
                 return
-            quit = self.tensor_subscriber.disable_gripper_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
+            quit = self.tensor_subscriber.quit_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
             if quit:
                 self._handle_action("quit")
                 return
