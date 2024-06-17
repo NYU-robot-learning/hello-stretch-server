@@ -16,6 +16,7 @@ class Listener(ProcessInstantiator):
             self.xarm = xArm(xarm_ip=port_configs["xarm_ip"])
 
         self.xarm.home()
+        self.xarm.replay_positions()
         self.tensor_subscriber = TensorSubscriber(port_configs)
 
     # continue looping until instruction is given, then handle instruction
@@ -55,6 +56,9 @@ class Listener(ProcessInstantiator):
             # self.xarm.set_home_position(*data)
         elif instruction == "quit":
             self.xarm.gripper.disable()
+            import pickle as pkl
+            with open("positions3.pkl", "wb") as f:
+                pkl.dump(self.xarm.positions, f)
             quit()
     
     # execute the robot action given by policy
