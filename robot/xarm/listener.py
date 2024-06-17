@@ -57,8 +57,8 @@ class Listener(ProcessInstantiator):
         elif instruction == "quit":
             self.xarm.gripper.disable()
             import pickle as pkl
-            with open("positions3.pkl", "wb") as f:
-                pkl.dump(self.xarm.positions, f)
+            # with open("positions3.pkl", "wb") as f:
+            #     pkl.dump(self.xarm.positions, f)
             quit()
     
     # execute the robot action given by policy

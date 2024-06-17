@@ -11,6 +11,7 @@ HOME_POS3 = [215.990036, 50.805801, 480.877808, -25.347137, -88.273659, -156.329
 END_EFFECTOR_TO_IPHONE = [125,0,95,0,-15,0]
 GRIPPER_OPEN = 3100
 GRIPPER_CLOSE = 1000
+FREQUENCY = 8
 
 class xArm:
     def __init__(self, xarm_ip):
@@ -26,7 +27,7 @@ class xArm:
         self.gripper = Gripper()
         self.gripper.move_to_pos(GRIPPER_OPEN)
         
-        self.positions = []
+        # self.positions = []
         
         self.gripper_values = [3100, 2000, 1200, 2000, 1200, 2800, 1200]
         self.count = 0
@@ -39,7 +40,7 @@ class xArm:
         # TODO: remove hardcoded value
         self.gripper.move_to_pos(GRIPPER_OPEN)
         
-        # self.arm.set_position(*HOME_POS3, speed=100, mvacc=1000, wait=True)
+        self.arm.set_position(*HOME_POS3, speed=100, mvacc=1000, wait=True)
         
         # TODO: clean up gripper movement code
         self.gripper_has_moved = False
@@ -92,14 +93,16 @@ class xArm:
             full_transform = base_to_end_effector @ self.wrist_to_iphone @ iphone_to_action @ np.linalg.inv(self.wrist_to_iphone)
             new_pos = transform_to_vec(full_transform)
             
-            self.positions.append(np.append(np.array(new_pos), gripper))
+            # self.positions.append(np.append(np.array(new_pos), gripper))
             
             self.arm.set_position(*new_pos, speed=100, mvacc=1000, wait=True)
+            
+            # time.sleep(1/FREQUENCY)
             
             # if gripper < 0.4 and not self.gripper_has_moved:
             #     self.gripper.move_to_pos(GRIPPER_CLOSE)
             #     self.gripper_has_moved = True
-            # if self.count in self.gripper_values:
-            #     self.gripper.move_to_pos(self.gripper_values[self.count])
+            if self.count in self.gripper_values:
+                self.gripper.move_to_pos(self.gripper_values[self.count])
             
             self.count += 1
