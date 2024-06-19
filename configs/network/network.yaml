@@ -1,7 +1,7 @@
 # host_address: "127.0.0.1"
-host_address: "100.116.213.134"
-remote_address: "100.114.186.17"
+host_address: "127.0.0.1"
+remote_address: "127.0.0.1"
 camera_port: 32922
 action_port: 8081
 flag_port: 2828
-xarm_ip: 192.168.1.1
+xarm_ip: 192.168.86.216
