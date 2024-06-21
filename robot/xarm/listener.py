@@ -48,12 +48,10 @@ class Listener(ProcessInstantiator):
             self._execute_robot_action(data)
         elif instruction == "home":
             self.xarm.home()
-        # TODO: implement home_params
         elif instruction == "home_params":
-            pass
-            # TODO: implement home_params
-            # self.xarm.set_home_position(*data)
+            self.xarm.move_relative(data)
         elif instruction == "quit":
+            self.xarm.open_gripper()
             self.xarm.gripper.disable()
             quit()
     

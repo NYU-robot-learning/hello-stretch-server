@@ -5,10 +5,23 @@ import time
 from robot.utils import create_transform, transform_to_vec
 from robot.xarm.gripper import Gripper
 
-HOME_POS = [241.788635, 16.398544, 459.922913, 20.221915, -88.524443, 162.505498]
+# HOME_POS = [241.504044, 14.53646, 464.727356, -21.489011, -87.75244, -156.007298]
+# HOME_POS = [268.259674, 14.537166, 378.942078, -32.851796, -88.226333, -144.201158]
+# HOME_POS = [265.04303, 5.275682, 418.980225, -36.629879, -88.254637, -142.362136] # AMERICAN EAGLE BAG
+# HOME_POS = [253.502518, -4.968012, 448.332031, -52.248251, -87.475988, -128.140349] # JOURNEYS
+# HOME_POS = [307.176697, -6.834308, 449.591614, -27.628254, -87.905591, -152.663917] # HOLLISTER and QDOBA
+HOME_POS = [284.008911, -18.132006, 484.083954, -27.36647, -87.102247, -155.131474]
 END_EFFECTOR_TO_IPHONE = [125,0,95,0,-15,0]
 GRIPPER_OPEN = 3100
-GRIPPER_CLOSE = 1000
+GRIPPER_CLOSE = 1200
+
+# xArm coordinate system:
+""" 
+        x      y
+        |    /
+        |  /
+z ______|/
+"""
 
 class xArm:
     def __init__(self, xarm_ip):
@@ -21,19 +34,31 @@ class xArm:
         print('xArm initialized')
         
         self.wrist_to_iphone = create_transform(END_EFFECTOR_TO_IPHONE)
+        self.base_to_home = create_transform(HOME_POS)
         self.gripper = Gripper()
-        self.gripper.move_to_pos(GRIPPER_OPEN)
+        self.open_gripper()
         
+    def open_gripper(self):
+        self.gripper.move_to_pos(GRIPPER_OPEN)
     
     def home(self):
-        # TODO: remove hardcoded value
-        self.gripper.move_to_pos(GRIPPER_OPEN)
+        self.open_gripper()
         
         self.arm.set_position(*HOME_POS, speed=100, mvacc=1000, wait=True)
         
         # TODO: clean up gripper movement code
         self.gripper_has_moved = False
-        
+    
+    # moves from home position to run starting position given relative motion from server
+    def move_relative(self, relative_action):
+        print(relative_action)
+        relative_action = np.array(relative_action)[:-1] # convert to numpy array get rid of gripper value
+        relative_action[:3] = 1000 * np.array([[1,0,0],[0,0,-1],[0,1,0]]) @ relative_action[:3] # swap y and -z, and convert to mm
+
+        new_pos = transform_to_vec(self.base_to_home @ create_transform(relative_action))
+            
+        self.arm.set_position(*new_pos, speed=100, mvacc=1000, wait=True)
+        self.open_gripper()
     
     def move_to_pose(self, relative_action, gripper):
         print("Time at executing action", time.time())
@@ -56,6 +81,10 @@ class xArm:
             
             self.arm.set_position(*new_pos, speed=100, mvacc=1000, wait=True)
             
-            if gripper < 0.4 and not self.gripper_has_moved:
-                self.gripper.move_to_pos(GRIPPER_CLOSE)
-                self.gripper_has_moved = True
+            # time.sleep(1/5)
+            
+            if gripper < 0.9 and not self.gripper_has_moved:
+                self.gripper.move_to_pos(800)
+                self.gripper_has_moved = True  
+            # elif gripper > 0.6 and self.gripper_has_moved:
+            #     self.gripper.move_to_pos(GRIPPER_OPEN)
