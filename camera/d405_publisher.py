@@ -21,6 +21,14 @@ RESIZED_IMAGE = (256, 256)
 RESIZED_DEPTH = (256, 192)
 D405_FPS = 15
 
+HOMOGRAPHY = np.array(
+    [
+        [1.96789705e00, 1.13820640e-01, -1.54030078e02],
+        [1.03472813e-02, 2.07551671e00, -1.85031015e02],
+        [-1.77798511e-05, 2.82942765e-04, 1.00000000e00],
+    ]
+)
+IPHONE_SIZE = (960, 720)
 
 realsense_ctx = rs.context()
 connected_devices = {}
@@ -76,15 +84,13 @@ def setup_realsense_camera(serial_number, color_size, depth_size, fps):
 
 # class D405ImagePublisher(ProcessInstantiator):
 class D405ImagePublisher:
-    def __init__(self, host, port, use_depth):
+    def __init__(self, host, port, use_depth, transform_images=True):
         self.host = host
         self.port = port
         self.use_depth = use_depth
+        self._transform_images = transform_images
 
-        self.rgb_publisher = ZMQCameraPublisher(
-            host = self.host, 
-            port = self.port
-        )
+        self.rgb_publisher = ZMQCameraPublisher(host=self.host, port=self.port)
         self._seq = 0
 
         try:
@@ -102,28 +108,36 @@ class D405ImagePublisher:
     def stream(self):
         count = 0
         while True:
-
             frames_d405 = self.pipeline_d405.wait_for_frames()
             color_frame_d405 = frames_d405.get_color_frame()
             depth_frame_d405 = frames_d405.get_depth_frame()
             image = np.asanyarray(color_frame_d405.get_data())
             depth = np.asanyarray(depth_frame_d405.get_data())
 
-            image = cv2.resize(image, dsize=RESIZED_IMAGE, interpolation=cv2.INTER_CUBIC)
+            if self._transform_images:
+                image = cv2.warpPerspective(image, HOMOGRAPHY, IPHONE_SIZE)
+
+            image = cv2.resize(
+                image, dsize=RESIZED_IMAGE, interpolation=cv2.INTER_CUBIC
+            )
             # print(depth.min(), depth.max(), depth.shape)
 
             if self.use_depth:
                 depth = np.ascontiguousarray(depth).astype(np.uint16)
-                resized_depth = cv2.resize(depth, RESIZED_DEPTH,  interpolation = cv2.INTER_NEAREST) 
+                resized_depth = cv2.resize(
+                    depth, RESIZED_DEPTH, interpolation=cv2.INTER_NEAREST
+                )
                 depth_processed = (resized_depth * 0.0001).astype(np.float32)
 
                 cv2.imshow("D405 Depth pre", resized_depth)
                 cv2.imshow("D405", image)
-                
-                self.rgb_publisher.pub_image_and_depth(image, depth_processed, time.time())
+
+                self.rgb_publisher.pub_image_and_depth(
+                    image, depth_processed, time.time()
+                )
             else:
                 cv2.imshow("D405", image)
-                
+
                 self.rgb_publisher.pub_rgb_image(image, time.time())
 
             self._seq += 1
