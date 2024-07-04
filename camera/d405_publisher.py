@@ -2,12 +2,11 @@ import cv2
 
 import numpy as np
 import time
-from imgcat import imgcat
 import pyrealsense2 as rs
 
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
+from robot.zmq_utils import ZMQCameraPublisher, ProcessInstantiator
+import matplotlib.pyplot as plt
 
 # from numpy_ros import converts_to_message, to_message
 
@@ -18,6 +17,8 @@ SEQ_PUBLISHER_NAME = "/gopro_seq"
 
 D405_COLOR_SIZE = [640, 480]
 D405_DEPTH_SIZE = [640, 480]
+RESIZED_IMAGE = (256, 256)
+RESIZED_DEPTH = (256, 192)
 D405_FPS = 15
 
 
@@ -73,22 +74,17 @@ def setup_realsense_camera(serial_number, color_size, depth_size, fps):
     return pipeline
 
 
-class D405ImagePublisher(object):
-    def __init__(self):
-        # Initializing ROS node
-        # try:
-        #     rospy.init_node(NODE_NAME)
-        # except rospy.exceptions.ROSException as e:
-        #     print(e)
-        #     print("ROS node already initialized")
-        self.bridge = CvBridge()
-        # self.image_publisher = rospy.Publisher(
-        #     IMAGE_PUBLISHER_NAME, Image, queue_size=1
-        # )
-        # self.depth_publisher = rospy.Publisher(
-        #     DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
-        # )
-        # self.seq_publisher = rospy.Publisher(SEQ_PUBLISHER_NAME, Int32, queue_size=1)
+# class D405ImagePublisher(ProcessInstantiator):
+class D405ImagePublisher:
+    def __init__(self, host, port, use_depth):
+        self.host = host
+        self.port = port
+        self.use_depth = use_depth
+
+        self.rgb_publisher = ZMQCameraPublisher(
+            host = self.host, 
+            port = self.port
+        )
         self._seq = 0
 
         try:
@@ -103,8 +99,8 @@ class D405ImagePublisher(object):
             fps=D405_FPS,
         )
 
-    def publish_image_from_camera(self):
-        # rate = rospy.Rate(D405_FPS)
+    def stream(self):
+        count = 0
         while True:
 
             frames_d405 = self.pipeline_d405.wait_for_frames()
@@ -113,45 +109,37 @@ class D405ImagePublisher(object):
             image = np.asanyarray(color_frame_d405.get_data())
             depth = np.asanyarray(depth_frame_d405.get_data())
 
-            # image, depth, pose = self.app.start_process_image()
-            # image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
-            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
-            print(depth.min(), depth.max(), depth.shape)
-            cv2.imshow("D405 Depth pre", depth)
-            depth = np.ascontiguousarray(depth).astype(np.float64)
-            print(depth.min(), depth.max(), depth.shape)
+            image = cv2.resize(image, dsize=RESIZED_IMAGE, interpolation=cv2.INTER_CUBIC)
+            # print(depth.min(), depth.max(), depth.shape)
 
-            cv2.imshow("D405", image)
-            cv2.imshow("D405 Depth post", depth * 0.01)
+            if self.use_depth:
+                depth = np.ascontiguousarray(depth).astype(np.uint16)
+                resized_depth = cv2.resize(depth, RESIZED_DEPTH,  interpolation = cv2.INTER_NEAREST) 
+                depth_processed = (resized_depth * 0.0001).astype(np.float32)
 
-            # Creating a CvBridge and publishing the data to the rostopic
-            try:
-                self.image_message = self.bridge.cv2_to_imgmsg(image, "bgr8")
-            except CvBridgeError as e:
-                print(e)
+                cv2.imshow("D405 Depth pre", resized_depth)
+                cv2.imshow("D405", image)
+                
+                self.rgb_publisher.pub_image_and_depth(image, depth_processed, time.time())
+            else:
+                cv2.imshow("D405", image)
+                
+                self.rgb_publisher.pub_rgb_image(image, time.time())
 
-            depth_data = convert_numpy_array_to_float32_multi_array(depth)
-            # self.image_publisher.publish(self.image_message)
-            # self.depth_publisher.publish(depth_data)
-            # self.seq_publisher.publish(Int32(self._seq))
             self._seq += 1
 
             # Stopping the camera
             if cv2.waitKey(1) == 27:
                 break
-            # if self.app.stream_stopped:
-            #     print("breaking")
-            #     break
-
-            # rate.sleep()
             time.sleep(1 / D405_FPS)
+            count += 1
 
         cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
     print("connected")
-    camera_publisher = D405ImagePublisher()
+    camera_publisher = D405ImagePublisher("localhost", 32922)
     # print('calling publisher')
-    camera_publisher.publish_image_from_camera()
+    camera_publisher.stream()
     # print('publisher end')

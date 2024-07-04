@@ -1,106 +1,81 @@
+from camera.demo import R3DApp
 import cv2
-import rospy
-
-import numpy as np
 import time
-from imgcat import imgcat
-
-from sensor_msgs.msg import Image
-from rospy.numpy_msg import numpy_msg
-from cv_bridge import CvBridge, CvBridgeError
-from rospy_tutorials.msg import Floats
-from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Int32
-
-# from numpy_ros import converts_to_message, to_message
-from .demo import R3DApp
-
-NODE_NAME = "gopro_node"
-IMAGE_PUBLISHER_NAME = "/gopro_image"
-DEPTH_PUBLISHER_NAME = "/gopro_depth"
-SEQ_PUBLISHER_NAME = "/gopro_seq"
-
-
-# @converts_to_message(Float32MultiArray))
-def convert_numpy_array_to_float32_multi_array(matrix):
-    # Create a Float64MultiArray object
-    data_to_send = Float32MultiArray()
-
-    # Set the layout parameters
-    data_to_send.layout.dim.append(MultiArrayDimension())
-    data_to_send.layout.dim[0].label = "rows"
-    data_to_send.layout.dim[0].size = len(matrix)
-    data_to_send.layout.dim[0].stride = len(matrix) * len(matrix[0])
-
-    data_to_send.layout.dim.append(MultiArrayDimension())
-    data_to_send.layout.dim[1].label = "columns"
-    data_to_send.layout.dim[1].size = len(matrix[0])
-    data_to_send.layout.dim[1].stride = len(matrix[0])
-
-    # Flatten the matrix into a list
-    data_to_send.data = matrix.flatten().tolist()
-
-    return data_to_send
-
-
-class ImagePublisher(object):
-    def __init__(self, app):
-        # Initializing camera
-        self.app = app
-        # Initializing ROS node
-        try:
-            rospy.init_node(NODE_NAME)
-        except rospy.exceptions.ROSException as e:
-            print(e)
-            print("ROS node already initialized")
-        self.bridge = CvBridge()
-        self.image_publisher = rospy.Publisher(
-            IMAGE_PUBLISHER_NAME, Image, queue_size=1
+from robot.zmq_utils import *
+import os
+    
+class R3DCameraPublisher(ProcessInstantiator):
+    def __init__(self, host, port, use_depth):
+        super().__init__()
+        self.host = host
+        self.port = port
+        self.use_depth = use_depth
+        self.rgb_publisher = ZMQCameraPublisher(
+            host = self.host, 
+            port = self.port
         )
-        self.depth_publisher = rospy.Publisher(
-            DEPTH_PUBLISHER_NAME, Float32MultiArray, queue_size=1
-        )
-        self.seq_publisher = rospy.Publisher(
-            SEQ_PUBLISHER_NAME, Int32, queue_size=1
-        )
+        
         self._seq = 0
+        self.timer = FrequencyTimer(50)
 
-    def publish_image_from_camera(self):
-        rate = rospy.Rate(10)
-        while True:
+        self._start_camera()
+
+    # start the Record3D streaming
+    def _start_camera(self):
+        self.app = R3DApp()
+        while self.app.stream_stopped:
+            try:
+                self.app.connect_to_device(dev_idx=0)
+            except RuntimeError as e:
+                print(e)
+                print(
+                    "Retrying to connect to device with id {idx}, make sure the device is connected and id is correct...".format(
+                        idx=0
+                    )
+                )
+                time.sleep(2)
+
+    # get the RGB and depth images from the Record3D
+    def get_rgb_depth_images(self):
+        image = None
+        while image is None:
             image, depth, pose = self.app.start_process_image()
             image = np.moveaxis(image, [0], [1])[..., ::-1, ::-1]
             image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
-            depth = np.ascontiguousarray(np.rot90(depth, -1)).astype(np.float64)
-            
-            # Creating a CvBridge and publishing the data to the rostopic
-            try:
-                self.image_message = self.bridge.cv2_to_imgmsg(image, "bgr8")
-            except CvBridgeError as e:
-                print(e)
-
-            depth_data = convert_numpy_array_to_float32_multi_array(depth)
-            self.image_publisher.publish(self.image_message)
-            self.depth_publisher.publish(depth_data)
-            self.seq_publisher.publish(Int32(self._seq))
-            self._seq += 1
-
-            # Stopping the camera
-            if cv2.waitKey(1) == 27:
-                break
+        if self.use_depth: 
+            depth = np.ascontiguousarray(np.rot90(depth, -1)).astype(np.float64)  
+            return image, depth, pose
+        else:
+            return image, pose
+    
+    # get RGB images at 50Hz and publish them to the ZMQ port
+    def stream(self):
+        while True:
             if self.app.stream_stopped:
-                print("breaking")
-                break
+                try:
+                    self.app.connect_to_device(dev_idx=0)
+                except RuntimeError as e:
+                    print(e)
+                    print(
+                        "Retrying to connect to device with id {idx}, make sure the device is connected and id is correct...".format(
+                            idx=0
+                        )
+                    )
+                    time.sleep(2)
+            else:
+                self.timer.start_loop()
+                if self.use_depth:
+                    image, depth, pose = self.get_rgb_depth_images()
+                    self.rgb_publisher.pub_image_and_depth(image, depth, time.time())
+                else:
+                    image, pose = self.get_rgb_depth_images()
+                    self.rgb_publisher.pub_rgb_image(image, time.time())
+                self.timer.end_loop()
 
-            rate.sleep()
-
+                if "DISPLAY" in os.environ:
+                    cv2.imshow("iPhone", image)
+            
+                if cv2.waitKey(1) == 27:
+                    break
+        
         cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    app = R3DApp()
-    app.connect_to_device(dev_idx=0)
-    print("connected")
-    camera_publisher = ImagePublisher(app)
-    # print('calling publisher')
-    camera_publisher.publish_image_from_camera()
-    # print('publisher end')

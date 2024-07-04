@@ -1,7 +1,7 @@
 import stretch_body.robot
 import numpy as np
 import PyKDL
-import rospy
+from pathlib import Path
 
 # from baxter_kdl.kdl_parser import kdl_tree_from_urdf_model
 from urdf_parser_py.urdf import URDF
@@ -10,19 +10,14 @@ import math
 import time
 import random
 import os
-from .utils import (
-    euler_to_quat,
-    urdf_joint_to_kdl_joint,
-    urdf_pose_to_kdl_frame,
-    urdf_inertial_to_kdl_rbi,
-    kdl_tree_from_urdf_model,
-)
+from ..utils import kdl_tree_from_urdf_model
 
 
 pick_place = [38.0, 15, 47]  # 15 looks wrong
 pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
+MAX_RETRIES = 50
 
 
 class HelloRobot:
@@ -30,11 +25,11 @@ class HelloRobot:
         self,
         urdf_file="stretch_nobase_raised.urdf",
         gripper_threshold=7, # unused
-        stretch_gripper_max=51,
+        stretch_gripper_max=50,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-10, -25],
-        sticky_gripper=False,
-        gripper_threshold_post_grasp_list=[0.65*51, 0.3*51, 0.6*51, 0.8*51],
+        stretch_gripper_tight=[-40],
+        sticky_gripper=True,
+        gripper_threshold_post_grasp_list=[0.6*50, 0.5*25],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -45,7 +40,7 @@ class HelloRobot:
         self.threshold_count = 0
 
         self.urdf_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "urdf", self.urdf_file
+            str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
         self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list
@@ -62,10 +57,6 @@ class HelloRobot:
             "joint_wrist_pitch",
             "joint_wrist_roll",
         ]
-        try:
-            rospy.init_node("hello_robot_node")
-        except:
-            print("node already initialized")
 
         self.robot = stretch_body.robot.Robot()
         self.startup()
@@ -74,7 +65,7 @@ class HelloRobot:
         self.base_x = self.robot.base.status["x"]
         self.base_y = self.robot.base.status["y"]
 
-        time.sleep(2)
+        time.sleep(2) # TODO; check if can be removed
 
         # Constraining the robots movement
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
@@ -154,6 +145,9 @@ class HelloRobot:
     def home(self):
         self.not_grasped = True
         self._has_gripped = False
+
+        self.robot.push_command()
+
         self.threshold_count = 0
         self.move_to_position(
             self.home_lift,
@@ -190,20 +184,7 @@ class HelloRobot:
             + (self.base_x - self.robot.base.status["x"]) ** 2
         )
 
-        # print('orig_dist:', origin_dist)
-        # far_dist = math.sqrt((self.far_y - self.robot.base.status['y'])**2+(self.far_x - self.robot.base.status['x'])**2)
-
-        ## commented for debugging
-        # print('far dist vals:', far_dist, self.far_to_origin)
-        # if(far_dist <= self.far_to_origin):
-        ## commented for debugging
-
         self.joints["joint_fake"] = origin_dist
-        ## commented for debugging
-        # else:
-        #     self.joints['joints_fake'] = -1*origin_dist
-        ## commented for debugging
-
         self.joints["joint_lift"] = self.robot.lift.status["pos"]
 
         armPos = self.robot.arm.status["pos"]
@@ -221,9 +202,6 @@ class HelloRobot:
         self.joints["joint_wrist_pitch"] = OVERRIDE_STATES.get(
             "wrist_pitch", self.robot.end_of_arm.status["wrist_pitch"]["pos"]
         )
-        # self.joints["joint_wrist_pitch"] = self.robot.end_of_arm.status["wrist_pitch"]["pos"]
-        # print("1:", OVERRIDE_STATES["wrist_pitch"])
-        # print("2:", self.robot.end_of_arm.status["wrist_pitch"]["pos"])
 
         self.joints["joint_stretch_gripper"] = self.robot.end_of_arm.status[
             "stretch_gripper"
@@ -282,19 +260,46 @@ class HelloRobot:
         print("Gripper state after update:", self.GRIPPER_THRESHOLD)
 
         if self.CURRENT_STATE < self.get_threshold() or (self._sticky_gripper and self._has_gripped):
-            self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_TIGHT[self.threshold_count//2])
+            self.gripper = self.STRETCH_GRIPPER_TIGHT[self.threshold_count//2]
+            self.robot.end_of_arm.move_to("stretch_gripper", self.gripper)
             if not self._has_gripped:
                 self.threshold_count += 1
             self._has_gripped = True
         else:
-            self.robot.end_of_arm.move_to('stretch_gripper', self.STRETCH_GRIPPER_MAX)
+            self.gripper = self.STRETCH_GRIPPER_MAX
+            self.robot.end_of_arm.move_to('stretch_gripper', self.gripper)
             if self._has_gripped:
                 self.threshold_count += 1
             self._has_gripped = False
         self.robot.push_command()
 
-        # sleeping to make sure all the joints are updated correctly (remove if not necessary)
-        # time.sleep(.7)
+
+    def getJointPos(self):
+        lift_pos = self.robot.lift.status["pos"]
+        base_pos = math.sqrt((self.base_y - self.robot.base.status["y"]) ** 2 + (self.base_x - self.robot.base.status["x"]) ** 2)
+        arm_pos = self.robot.arm.status["pos"]
+        gripper_pos = self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"]
+
+        return lift_pos, base_pos, arm_pos, gripper_pos
+
+    def has_reached(self, ik_joints, gripper):
+        lift_pos, base_pos, arm_pos, gripper_pos = self.getJointPos() # Get current state of life, base, arm, and gripper
+
+        delta = np.array(
+            [ik_joints["joint_lift"]-lift_pos, 
+            ik_joints["joint_fake"]-base_pos, 
+            max(ik_joints["joint_arm_l0"]*4, 0)-arm_pos, 
+            (self.gripper-gripper_pos)/self.STRETCH_GRIPPER_MAX]
+        )
+        
+        # print(self.gripper, gripper_pos, self.STRETCH_GRIPPER_MAX)
+        print(delta)
+
+        delta_norm = np.linalg.norm(delta[:3])
+
+        print(delta_norm)
+
+        return delta_norm < 0.03 and delta[-1] < 0.2
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         translation = [
@@ -333,20 +338,24 @@ class HelloRobot:
         ik_joints = {}
 
         for joint_index in range(self.joint_array.rows()):
-            # print(joint_index)
-            # print(joint_list[joint_index])
             ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
 
-        # print('ik_joints', ik_joints)
-        # test_pose = PyKDL.Frame()
-        # self.fk_p_kdl.JntToCart(self.joint_array, test_pose)
-
-        # # print(test_pose.p)
-        # # print(test_pose.M.GetRPY())
-
+        # ik_joints["joint_wrist_roll"] = 0
+        # ik_joints["joint_wrist_pitch"] = 0
+        # ik_joints["joint_wrist_yaw"] = 0
         self.move_to_joints(ik_joints, gripper)
 
-        self.robot.push_command()
+        reached = False
+        checks = 0
+        while not reached:
+            reached = self.has_reached(ik_joints, gripper)
+            time.sleep(0.1)
+
+            if checks > MAX_RETRIES:
+                print("Failed to reach within 3cm of desired position")
+                break
+        
+        time.sleep(0.3)
 
         self.updateJoints()
         for joint_index in range(self.joint_array.rows()):

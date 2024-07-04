@@ -1,22 +1,21 @@
 import hydra
-from initializers import StartServer
+from initializers import StartScript
 import signal
 import sys
 
-@hydra.main(config_path="configs", config_name="start_server", version_base="1.2")
+@hydra.main(config_path="configs", config_name="start_script", version_base="1.2")
 def main(cfg):
     """
     Main function to start the server
     """
     #Start the server
-    server = StartServer(cfg)
+    server = StartScript(cfg)
     processes = server.get_processes()
 
     for process in processes:
         process.start()
     for process in processes:
         process.join()
-    print("Server started")
 
     def signal_handler(sig, frame):
         for process in processes:

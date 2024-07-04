@@ -1,0 +1,14 @@
+defaults:
+  - _self_
+  - network: network
+  - camera: iphone_script
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+use_depth: False
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
+  
