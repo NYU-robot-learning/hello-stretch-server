@@ -1,26 +1,26 @@
 import numpy as np
-from ..zmq_utils import *
+from ..zmq_utils import ZMQKeypointSubscriber, create_response_socket
 
 class TensorSubscriber(object):
     def __init__(self,configs):
         # create the ZMQ subscriber for robot action, home, and home params
         self.robot_action_subscriber = ZMQKeypointSubscriber(
-            host=configs['host'],
+            host=configs['remote'],
             port=configs['action_port'],
             topic="robot_action",
         )
         self.home_subscriber = ZMQKeypointSubscriber(
-            host=configs['host'],
+            host=configs['remote'],
             port=configs['action_port'],
             topic="home",
         )
         self.home_params_subscriber = ZMQKeypointSubscriber(
-            host=configs['host'],
+            host=configs['remote'],
             port=configs['action_port'],
             topic="params",
         )
         self.zero_velocity_subscriber = ZMQKeypointSubscriber(
-            host=configs['host'],
+            host=configs['remote'],
             port=configs['action_port'],
             topic="zero",
         )
