@@ -68,7 +68,7 @@ class HelloRobot:
     def move_to_position(
         self,
         lift_pos=0.7,
-        arm_pos=0.02,
+        arm_pos=0.04,
         base_trans=0.0,
         wrist_yaw=0.0,
         wrist_pitch=0.0,
@@ -107,7 +107,7 @@ class HelloRobot:
 
     def set_home_position(
         self,
-        lift=0.7,
+        lift=0.9,
         arm=0.02,
         base=0.0,
         wrist_yaw=0.0,
