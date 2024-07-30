@@ -73,6 +73,14 @@ def setup_realsense_camera(serial_number, color_size, depth_size, fps):
     profile = pipeline.start(config)
     return pipeline
 
+def transform_d405_to_iphone(d405_cv2_image, iphone_size = (960, 720)):
+   HOMOGRAPHY = np.array([
+      [ 1.96789705e+00,  1.13820640e-01, -1.54030078e+02],
+      [ 1.03472813e-02,  2.07551671e+00, -1.85031015e+02],
+      [-1.77798511e-05,  2.82942765e-04,  1.00000000e+00]
+   ])
+   warped_image = cv2.warpPerspective(d405_cv2_image, HOMOGRAPHY, iphone_size)
+   return warped_image
 
 # class D405ImagePublisher(ProcessInstantiator):
 class D405ImagePublisher:
@@ -109,6 +117,7 @@ class D405ImagePublisher:
             image = np.asanyarray(color_frame_d405.get_data())
             depth = np.asanyarray(depth_frame_d405.get_data())
 
+            image = transform_d405_to_iphone(image)
             image = cv2.resize(image, dsize=RESIZED_IMAGE, interpolation=cv2.INTER_CUBIC)
             # print(depth.min(), depth.max(), depth.shape)
 
