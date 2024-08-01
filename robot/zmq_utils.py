@@ -2,7 +2,6 @@ import zmq
 import cv2
 import numpy as np
 import pickle
-import blosc as bl
 import threading
 import time
 from abc import ABC
