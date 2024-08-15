@@ -29,7 +29,7 @@ class HelloRobot:
         gripper_threshold=7, # unused
         stretch_gripper_max=STRETCH_GRIPPER_MAX,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-20],
+        stretch_gripper_tight=[-10],
         sticky_gripper=False,
         # Below the first value, it will close, above the second value it will open
         gripper_threshold_post_grasp_list=[0.7*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
@@ -105,6 +105,13 @@ class HelloRobot:
             + self.STRETCH_GRIPPER_MIN
         )
 
+        self.robot.end_of_arm.move_to("wrist_yaw", wrist_yaw)
+        PITCH_VAL = wrist_pitch
+        self.robot.end_of_arm.move_to("wrist_pitch", PITCH_VAL)
+        # NOTE: belwo code is to fix the pitch drift issue in current hello-robot. Remove it if there is no pitch drift issue
+        OVERRIDE_STATES["wrist_pitch"] = PITCH_VAL
+        self.robot.end_of_arm.move_to("wrist_roll", wrist_roll)
+
         self.robot.lift.move_to(lift_pos)
         self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
         self.robot.push_command()
@@ -117,12 +124,6 @@ class HelloRobot:
             self.robot.arm.move_to(arm_pos)
             self.robot.push_command()
 
-        self.robot.end_of_arm.move_to("wrist_yaw", wrist_yaw)
-        PITCH_VAL = wrist_pitch
-        self.robot.end_of_arm.move_to("wrist_pitch", PITCH_VAL)
-        # NOTE: belwo code is to fix the pitch drift issue in current hello-robot. Remove it if there is no pitch drift issue
-        OVERRIDE_STATES["wrist_pitch"] = PITCH_VAL
-        self.robot.end_of_arm.move_to("wrist_roll", wrist_roll)
         self.robot.base.translate_by(base_trans)
         print("moving to position 3")
         self.robot.push_command()
