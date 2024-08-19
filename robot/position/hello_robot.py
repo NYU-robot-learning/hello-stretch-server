@@ -18,8 +18,8 @@ pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
-STRETCH_GRIPPER_MAX = 70
-HOME_POS = 0.8
+STRETCH_GRIPPER_MAX = 150
+HOME_POS = 0.7
 ROTATION_VEL = 1
 
 class HelloRobot:
@@ -30,7 +30,7 @@ class HelloRobot:
         stretch_gripper_max=STRETCH_GRIPPER_MAX,
         stretch_gripper_min=0,
         stretch_gripper_tight=[-30],
-        sticky_gripper=False,
+        sticky_gripper=True,
         # Below the first value, it will close, above the second value it will open
         gripper_threshold_post_grasp_list=[0.7*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
     ):
