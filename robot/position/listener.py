@@ -6,7 +6,7 @@ import zmq
 from ..zmq_utils import *
     
 class Listener(ProcessInstantiator):
-    def __init__(self, host, hello_robot, gripper_safety_limits, translation_safety_limits, stream_during_motion, port_configs):
+    def __init__(self, host, hello_robot, hello_robot_config, gripper_safety_limits, translation_safety_limits, stream_during_motion, port_configs):
         super().__init__()
         self.hello_robot = hello_robot
         self.gripper_safety_limits = gripper_safety_limits
@@ -16,7 +16,10 @@ class Listener(ProcessInstantiator):
         
         print("starting robot listner")
         if self.hello_robot is None:
-            self.hello_robot = HelloRobot()
+            if hello_robot_config is not None:
+                self.hello_robot = HelloRobot(**hello_robot_config)
+            else:
+                self.hello_robot = HelloRobot()
 
         self.hello_robot.home()
         self.tensor_subscriber = TensorSubscriber(port_configs)

@@ -6,6 +6,7 @@ defaults:
   - override hydra/job_logging: disabled
 
 use_depth: True
+robot_cfg: null
 
 hydra:  
   output_subdir: null  

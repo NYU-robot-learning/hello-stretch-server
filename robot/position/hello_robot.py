@@ -19,8 +19,14 @@ pouring = [33, 19, 53]
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
 STRETCH_GRIPPER_MAX = 150
-HOME_POS = 0.4
+HOME_POS = 0.8
 ROTATION_VEL = 1
+
+STRETCH_GRIPPER_MAX = 150
+STRETCH_GRIPPER_TIGHT = -35
+STICKY_GRIPPER = False
+CLOSING_THRESHOLD = 0.85
+REOPENING_THRESHOLD = 0.8
 
 class HelloRobot:
     def __init__(
@@ -29,10 +35,12 @@ class HelloRobot:
         gripper_threshold=7, # unused
         stretch_gripper_max=STRETCH_GRIPPER_MAX,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-10],
-        sticky_gripper=False,
+        stretch_gripper_tight=[STRETCH_GRIPPER_TIGHT],
+        sticky_gripper=STICKY_GRIPPER,
+        closing_threshold=CLOSING_THRESHOLD,
+        reopening_threshold=REOPENING_THRESHOLD,
         # Below the first value, it will close, above the second value it will open
-        gripper_threshold_post_grasp_list=[0.7*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
+        gripper_threshold_post_grasp_list=None,
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -47,7 +55,7 @@ class HelloRobot:
             str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
-        self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list
+        self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list or [closing_threshold*stretch_gripper_max, reopening_threshold*stretch_gripper_max]
 
         # Initializing ROS node
         self.joint_list = [
