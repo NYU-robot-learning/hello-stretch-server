@@ -16,13 +16,16 @@ from ..utils import kdl_tree_from_urdf_model
 pick_place = [38.0, 15, 47]  # 15 looks wrong
 pouring = [33, 19, 53]
 
+OVERRIDE_STATES = {}
+MAX_RETRIES = 50
+HOME_POS = 0.6
+ROTATION_VEL = 1
+
 STRETCH_GRIPPER_MAX = 55
 STRETCH_GRIPPER_TIGHT = -10
 STICKY_GRIPPER = False
 CLOSING_THRESHOLD = 0.2
 REOPENING_THRESHOLD = 0.5
-HOME_POS = 0.6
-OVERRIDE_STATES = {}
 
 class HelloRobot:
     def __init__(
