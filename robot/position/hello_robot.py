@@ -44,7 +44,7 @@ class HelloRobot:
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
-        self.STRETCH_GRIPPER_TIGHT = stretch_gripper_tight
+        self.STRETCH_GRIPPER_TIGHT = [stretch_gripper_tight] if not isinstance(stretch_gripper_tight, list) else stretch_gripper_tight
         self._has_gripped = False
         self._sticky_gripper = sticky_gripper
         self.urdf_file = urdf_file
@@ -55,6 +55,8 @@ class HelloRobot:
             str(Path(__file__).resolve().parent.parent / "urdf" / self.urdf_file)
         )
         self.GRIPPER_THRESHOLD = gripper_threshold
+        self.CLOSING_THRESHOLD = closing_threshold
+        self.REOPENING_THRESHOLD = reopening_threshold
         self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list or [closing_threshold*stretch_gripper_max, reopening_threshold*stretch_gripper_max]
 
         # Initializing ROS node
@@ -69,6 +71,8 @@ class HelloRobot:
             "joint_wrist_pitch",
             "joint_wrist_roll",
         ]
+
+        self._params_changed = False
 
         self.robot = stretch_body.robot.Robot()
         self.startup()
@@ -153,6 +157,15 @@ class HelloRobot:
         wrist_pitch=0.0,
         wrist_roll=0.0,
         gripper=1.0,
+        # Add new set of parameters that can be set remotely.
+        stretch_gripper_max=None,
+        stretch_gripper_min=None,
+        stretch_gripper_tight=None,
+        sticky_gripper=None,
+        closing_threshold=None,
+        reopening_threshold=None,
+        # Below the first value, it will close, above the second value it will open
+        gripper_threshold_post_grasp_list=None,
     ):
         self.home_lift = lift
         self.home_arm = arm
@@ -161,6 +174,34 @@ class HelloRobot:
         self.home_wrist_roll = wrist_roll
         self.home_gripper = gripper
         self.home_base = base
+
+        # By default, they don't change. Only way to change it would be to set them explicitly
+        if stretch_gripper_max is not None:
+            self.STRETCH_GRIPPER_MAX = stretch_gripper_max
+        if stretch_gripper_min is not None:
+            self.STRETCH_GRIPPER_MIN = stretch_gripper_min
+        if stretch_gripper_tight is not None:
+            if isinstance(stretch_gripper_tight, list):
+                self.STRETCH_GRIPPER_TIGHT = stretch_gripper_tight
+            else:
+                self.STRETCH_GRIPPER_TIGHT = [stretch_gripper_tight]
+        if sticky_gripper is not None:
+            self._sticky_gripper = sticky_gripper
+
+        if closing_threshold is not None:
+            self.CLOSING_THRESHOLD = closing_threshold
+        if reopening_threshold is not None:
+            self.REOPENING_THRESHOLD = reopening_threshold
+        if gripper_threshold_post_grasp_list is not None:
+            self.GRIPPER_THRESHOLD_POST_GRASP_LIST = gripper_threshold_post_grasp_list
+        else:
+            self.GRIPPER_THRESHOLD_POST_GRASP_LIST = [
+                self.CLOSING_THRESHOLD*self.STRETCH_GRIPPER_MAX, 
+                self.REOPENING_THRESHOLD*self.STRETCH_GRIPPER_MAX
+            ]
+
+        self._params_changed = True
+
 
     def home(self):
         self.not_grasped = True
@@ -178,6 +219,8 @@ class HelloRobot:
             self.home_wrist_roll,
             self.home_gripper,
         )
+
+        self._params_changed = False
 
     def setup_kdl(self):
         self.joints = {"joint_fake": 0}
@@ -348,6 +391,9 @@ class HelloRobot:
         return translation_delta_norm < 0.02
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
+        if self._params_changed:
+            print("WARNING!!! Params changed recently, please home before you move the robot.")
+            return
         translation = [
             translation_tensor[0],
             translation_tensor[1],
