@@ -15,11 +15,9 @@ IMAGE_PUBLISHER_NAME = "/gopro_image"
 DEPTH_PUBLISHER_NAME = "/gopro_depth"
 SEQ_PUBLISHER_NAME = "/gopro_seq"
 
-D405_COLOR_SIZE = [640, 480]
-D405_DEPTH_SIZE = [640, 480]
-RESIZED_IMAGE = (256, 256)
-RESIZED_DEPTH = (256, 192)
-D405_FPS = 15
+D435I_COLOR_SIZE = [640, 480]
+D435I_DEPTH_SIZE = [640, 480]
+D435I_FPS = 15
 
 
 realsense_ctx = rs.context()
@@ -50,17 +48,7 @@ def setup_realsense_camera(serial_number, color_size, depth_size, fps):
     profile = pipeline.start(config)
     return pipeline
 
-def transform_d405_to_iphone(d405_cv2_image, iphone_size = (960, 720)):
-   HOMOGRAPHY = np.array([
-      [ 1.96789705e+00,  1.13820640e-01, -1.54030078e+02],
-      [ 1.03472813e-02,  2.07551671e+00, -1.85031015e+02],
-      [-1.77798511e-05,  2.82942765e-04,  1.00000000e+00]
-   ])
-   warped_image = cv2.warpPerspective(d405_cv2_image, HOMOGRAPHY, iphone_size)
-   return warped_image
-
-# class D405ImagePublisher(ProcessInstantiator):
-class D405ImagePublisher:
+class D435ImagePublisher:
     def __init__(self, host, port, use_depth):
         self.host = host
         self.port = port
@@ -73,45 +61,44 @@ class D405ImagePublisher:
         self._seq = 0
 
         try:
-            d405_serial = connected_devices["Intel RealSense D405"]
+            d435i_serial = connected_devices["Intel RealSense D435I"]
         except KeyError:
-            raise SystemError("Unable to find Realsense D405...")
+            raise SystemError("Unable to find Realsense D435I...")
 
-        self.pipeline_d405 = setup_realsense_camera(
-            serial_number=d405_serial,
-            color_size=D405_COLOR_SIZE,
-            depth_size=D405_DEPTH_SIZE,
-            fps=D405_FPS,
+        self.pipeline_d435i = setup_realsense_camera(
+            serial_number=d435i_serial,
+            color_size=D435I_COLOR_SIZE,
+            depth_size=D435I_DEPTH_SIZE,
+            fps=D435I_FPS,
         )
     
-    def get_wrist_image_and_depth(self):
-        frames_d405 = self.pipeline_d405.wait_for_frames()
-        color_frame_d405 = frames_d405.get_color_frame()
-        depth_frame_d405 = frames_d405.get_depth_frame()
-        image = np.asanyarray(color_frame_d405.get_data())
-        depth = np.asanyarray(depth_frame_d405.get_data())
+    def get_head_image_and_depth(self):
+        frames_d435i = self.pipeline_d435i.wait_for_frames()
+        color_frame_d435i = frames_d435i.get_color_frame()
+        depth_frame_d435i = frames_d435i.get_depth_frame()
+        image = np.asanyarray(color_frame_d435i.get_data())
+        depth = np.asanyarray(depth_frame_d435i.get_data())
 
-        image = transform_d405_to_iphone(image)
-        image = cv2.resize(image, dsize=RESIZED_IMAGE, interpolation=cv2.INTER_CUBIC)
+        image = np.rot90(image, k=-1)
 
         return image, depth
 
     def stream(self):
         count = 0
         while True:
-            image, depth = self.get_wrist_image_and_depth()    
+            image, depth = self.get_head_image_and_depth()    
 
             if self.use_depth:
                 depth = np.ascontiguousarray(depth).astype(np.uint16)
                 resized_depth = cv2.resize(depth, RESIZED_DEPTH,  interpolation = cv2.INTER_NEAREST) 
                 depth_processed = (resized_depth * 0.0001).astype(np.float32)
 
-                cv2.imshow("D405 Depth pre", resized_depth)
-                cv2.imshow("D405", image)
+                cv2.imshow("D435i Depth pre", resized_depth)
+                cv2.imshow("D435i", image)
                 
                 self.rgb_publisher.pub_image_and_depth(image, depth_processed, time.time())
             else:
-                cv2.imshow("D405", image)
+                cv2.imshow("D435i", image)
                 
                 self.rgb_publisher.pub_rgb_image(image, time.time())
 
@@ -120,7 +107,7 @@ class D405ImagePublisher:
             # Stopping the camera
             if cv2.waitKey(1) == 27:
                 break
-            time.sleep(1 / D405_FPS)
+            time.sleep(1 / D435I_FPS)
             count += 1
 
         cv2.destroyAllWindows()
@@ -128,7 +115,7 @@ class D405ImagePublisher:
 
 if __name__ == "__main__":
     print("connected")
-    camera_publisher = D405ImagePublisher("localhost", 32922)
+    camera_publisher = D435ImagePublisher("localhost", 32922)
     # print('calling publisher')
     camera_publisher.stream()
     # print('publisher end')

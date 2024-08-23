@@ -6,8 +6,8 @@ host_address: 127.0.0.1 # robot
 remote_address: 127.0.0.1 # robot
 
 # Diffusion
-# host_address: 10.19.216.15 # 2001
-# remote_address: 172.24.71.224 # lambda-pluto
+# host_address: 100.106.134.29 # 2001
+# remote_address: 100.96.11.47 # lambda
 
 # host_address: "100.106.134.29"
 # remote_address: "100.94.192.118"
@@ -15,5 +15,6 @@ remote_address: 127.0.0.1 # robot
 # host_address: "100.116.213.134"
 # remote_address: "100.114.186.17"
 camera_port: 32922
+head_camera_port: 29893
 action_port: 8081
 flag_port: 2828

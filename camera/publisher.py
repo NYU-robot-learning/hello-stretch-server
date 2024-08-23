@@ -16,7 +16,11 @@ class R3DCameraPublisher(ProcessInstantiator):
         )
         
         self._seq = 0
-        self.timer = FrequencyTimer(50)
+        self.timer = FrequencyTimer(30)
+
+        # self.mask1 = np.load("new_stick_mask_60.npy")
+        # self.roi = np.load("old_stick_pos.npy")
+        # self.mask3 = np.load("old_stick_pos2.npy")
 
         self._start_camera()
 
@@ -65,15 +69,23 @@ class R3DCameraPublisher(ProcessInstantiator):
             else:
                 self.timer.start_loop()
                 if self.use_depth:
-                    image, depth, pose = self.get_rgb_depth_images()
-                    self.rgb_publisher.pub_image_and_depth(image, depth, time.time())
+                    wrist_image, wrist_depth, pose = self.get_rgb_depth_images()
+                    self.rgb_publisher.pub_image_and_depth(wrist_image, wrist_depth, time.time())
                 else:
-                    image, pose = self.get_rgb_depth_images()
-                    self.rgb_publisher.pub_rgb_image(image, time.time())
+                    wrist_image, pose = self.get_rgb_depth_images()
+                    self.rgb_publisher.pub_rgb_image(wrist_image, time.time())    
+                    
                 self.timer.end_loop()
+                
+                # image = cv2.bitwise_and(image, cv2.bitwise_not(self.mask1))
+                # mask2 = cv2.inRange(image, (0, 0, 0), (0, 0, 0))
+                # inpainted_image = cv2.inpaint(image, mask2, inpaintRadius=10, flags=cv2.INPAINT_TELEA)
+                # target_image = cv2.bitwise_and(inpainted_image, cv2.bitwise_not(self.mask3))
+                # target_image = cv2.add(target_image, self.roi)
+                # image = target_image
 
                 if "DISPLAY" in os.environ:
-                    cv2.imshow("iPhone", image)
+                    cv2.imshow("iPhone", wrist_image)
             
                 if cv2.waitKey(1) == 27:
                     break
