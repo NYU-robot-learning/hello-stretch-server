@@ -16,11 +16,11 @@ from ..utils import kdl_tree_from_urdf_model
 pick_place = [38.0, 15, 47]  # 15 looks wrong
 pouring = [33, 19, 53]
 
-OVERRIDE_STATES = {}
-MAX_RETRIES = 50
-STRETCH_GRIPPER_MAX = 150
-HOME_POS = 0.7
-ROTATION_VEL = 1
+STRETCH_GRIPPER_MAX = 55
+STRETCH_GRIPPER_TIGHT = -10
+STICKY_GRIPPER = False
+CLOSING_THRESHOLD = 0.2
+REOPENING_THRESHOLD = 0.5
 
 class HelloRobot:
     def __init__(
@@ -29,10 +29,10 @@ class HelloRobot:
         gripper_threshold=7, # unused
         stretch_gripper_max=STRETCH_GRIPPER_MAX,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-30],
-        sticky_gripper=True,
+        stretch_gripper_tight=[STRETCH_GRIPPER_TIGHT],
+        sticky_gripper=STICKY_GRIPPER,
         # Below the first value, it will close, above the second value it will open
-        gripper_threshold_post_grasp_list=[0.7*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
+        gripper_threshold_post_grasp_list=[CLOSING_THRESHOLD*STRETCH_GRIPPER_MAX, REOPENING_THRESHOLD*STRETCH_GRIPPER_MAX],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
