@@ -73,6 +73,7 @@ class HelloRobot:
 
         # Constraining the robots movement
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
+        self.head_cam_tilt = lambda lift, arm: np.arctan((lift - 1.17) / (arm + 0.25))
 
         # Joint dictionary for Kinematics
         self.setup_kdl()
@@ -123,6 +124,10 @@ class HelloRobot:
             # print(self.robot.get_status()['arm']['pos'])
             self.robot.arm.move_to(arm_pos)
             self.robot.push_command()
+        
+        self.robot.head.move_to('head_pan', -1.7)
+        head_tilt = self.head_cam_tilt(lift_pos, arm_pos)
+        self.robot.head.move_to('head_tilt', head_tilt)
 
         self.robot.base.translate_by(base_trans)
         print("moving to position 3")
@@ -251,6 +256,12 @@ class HelloRobot:
         self.robot.end_of_arm.move_to(
             "wrist_roll", self.clamp(joints["joint_wrist_roll"], -1.57, 1.57),  v_r=ROTATION_VEL
         )
+
+        lift_pos = joints["joint_lift"]
+        arm_pos = joints["joint_arm_l3"] + joints["joint_arm_l2"] + joints["joint_arm_l1"] + joints["joint_arm_l0"]
+        head_tilt = self.head_cam_tilt(lift_pos, arm_pos)
+        self.robot.head.move_to('head_tilt', head_tilt)
+        
         print("Gripper state before update:", self.CURRENT_STATE)
         print("Gripper instruction from the policy:", gripper[0])
         # gripper[0] value ranges from 0 to 1, 0 being closed and 1 being open. Below code maps the gripper value to the range of the gripper joint
