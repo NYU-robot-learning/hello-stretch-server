@@ -18,7 +18,7 @@ SEQ_PUBLISHER_NAME = "/gopro_seq"
 
 D435I_COLOR_SIZE = [640, 480]
 D435I_DEPTH_SIZE = [640, 480]
-D435I_FPS = 15
+D435I_FPS = 30
 
 
 realsense_ctx = rs.context()
