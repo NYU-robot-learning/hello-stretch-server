@@ -18,9 +18,9 @@ def urdf_joint_to_kdl_joint(jnt):
     origin_frame = urdf_pose_to_kdl_frame(jnt.origin)
     if jnt.joint_type == "fixed":
         # SE3
-        return kdl.Joint(jnt.name, kdl.Joint.Fixed)
+        # return kdl.Joint(jnt.name, kdl.Joint.Fixed)
         # RE1
-        # return kdl.Joint(jnt.name, getattr(kdl.Joint, "None"))
+        return kdl.Joint(jnt.name, getattr(kdl.Joint, "None"))
     axis = kdl.Vector(*jnt.axis)
     if jnt.joint_type == "revolute":
         return kdl.Joint(

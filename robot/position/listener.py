@@ -39,6 +39,7 @@ class Listener(ProcessInstantiator):
                 return
             home_params = self.tensor_subscriber.home_params_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
             if home_params is not None:
+                print('received home params')
                 self._handle_action("home_params", home_params)
                 return
 

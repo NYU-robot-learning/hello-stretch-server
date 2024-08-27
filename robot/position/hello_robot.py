@@ -167,6 +167,7 @@ class HelloRobot:
         # Below the first value, it will close, above the second value it will open
         gripper_threshold_post_grasp_list=None,
     ):
+        print("Set home position called")
         self.home_lift = lift
         self.home_arm = arm
         self.home_wrist_yaw = wrist_yaw
