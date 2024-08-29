@@ -1,5 +1,6 @@
 import numpy as np
 import PyKDL
+import os
 
 
 def euler_to_quat(r, p, y):
@@ -18,9 +19,10 @@ def urdf_joint_to_kdl_joint(jnt):
     origin_frame = urdf_pose_to_kdl_frame(jnt.origin)
     if jnt.joint_type == "fixed":
         # SE3
-        # return kdl.Joint(jnt.name, kdl.Joint.Fixed)
-        # RE1
-        return kdl.Joint(jnt.name, getattr(kdl.Joint, "None"))
+        if _get_stretch_version() > 1:
+            return kdl.Joint(jnt.name, kdl.Joint.Fixed)
+        else:
+            return kdl.Joint(jnt.name, getattr(kdl.Joint, "None"))
     axis = kdl.Vector(*jnt.axis)
     if jnt.joint_type == "revolute":
         return kdl.Joint(
@@ -91,3 +93,16 @@ def kdl_tree_from_urdf_model(urdf):
 
     add_children_to_tree(root)
     return tree
+
+
+def _get_stretch_version():
+    path = "/etc/hello-robot"
+    files = os.listdir(path)
+    fleet_id = None
+    for file in files:
+        if file.startswith("stretch-"):
+            fleet_id = file
+            break
+    stretch, version, serial = fleet_id.split("-")
+
+    return int(version[-1])
