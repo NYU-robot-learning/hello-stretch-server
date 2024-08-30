@@ -211,6 +211,9 @@ class HelloRobot:
         self.robot.push_command()
 
         self.threshold_count = 0
+        self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_MAX)
+        if self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"] < 0.9:
+            time.sleep(2)
         self.move_to_position(
             self.home_lift,
             self.home_arm,
@@ -365,7 +368,7 @@ class HelloRobot:
         yaw_pos = self.robot.end_of_arm.status["wrist_yaw"]["pos"]
         gripper_pos = self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"]
 
-        return lift_pos, base_pos, arm_pos, roll_pos, pitch_pos, yaw_pos, gripper_pos
+        return np.array([lift_pos, base_pos, arm_pos, roll_pos, pitch_pos, yaw_pos, gripper_pos])
 
     def has_reached(self, ik_joints, gripper):
         lift_pos, base_pos, arm_pos, roll_pos, pitch_pos, yaw_pos, gripper_pos = self.getJointPos() # Get current state of robot joints
@@ -389,7 +392,7 @@ class HelloRobot:
         # print(delta_translation)
         # print(rotation_delta_norm)
 
-        return translation_delta_norm < 0.02
+        return translation_delta_norm < 0.01
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         if self._params_changed:
@@ -438,11 +441,19 @@ class HelloRobot:
         reached = False
         checks = 0
         while not reached:
+            init_pose = self.getJointPos()
             reached = self.has_reached(ik_joints, gripper)
+            if reached:
+                time.sleep(0.3)
             time.sleep(0.05)
             if checks > MAX_RETRIES:
                 print("Failed to reach within 2cm of desired position")
                 break
+            if checks > MAX_RETRIES/3:
+                curr_pose = self.getJointPos()
+                if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
+                    break
+
             checks += 1
         # time.sleep(0.3)
 
