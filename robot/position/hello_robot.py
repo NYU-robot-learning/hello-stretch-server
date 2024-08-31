@@ -18,7 +18,7 @@ pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
-STRETCH_GRIPPER_MAX = 150
+STRETCH_GRIPPER_MAX = 45
 HOME_POS = 0.4
 ROTATION_VEL = 1
 
@@ -32,7 +32,7 @@ class HelloRobot:
         stretch_gripper_tight=[-40],
         sticky_gripper=True,
         # Below the first value, it will close, above the second value it will open
-        gripper_threshold_post_grasp_list=[0.4*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
+        gripper_threshold_post_grasp_list=[0.3*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -73,7 +73,7 @@ class HelloRobot:
 
         # Constraining the robots movement
         self.clamp = lambda n, minn, maxn: max(min(maxn, n), minn)
-        self.head_cam_tilt = lambda lift, arm: np.arctan((lift - 1.17) / (arm + 0.25))
+        self.head_cam_tilt = lambda lift, arm: np.arctan((lift - 1.17) / (arm + 0.4))
 
         # Joint dictionary for Kinematics
         self.setup_kdl()
@@ -125,7 +125,7 @@ class HelloRobot:
             self.robot.arm.move_to(arm_pos)
             self.robot.push_command()
         
-        self.robot.head.move_to('head_pan', -1.7)
+        self.robot.head.move_to('head_pan', -0.17)
         head_tilt = self.head_cam_tilt(lift_pos, arm_pos)
         self.robot.head.move_to('head_tilt', head_tilt)
 
@@ -167,7 +167,7 @@ class HelloRobot:
         self.threshold_count = 0
         self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_MAX)
         if self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"] < 0.9:
-            time.sleep(1)
+            time.sleep(2)
         self.move_to_position(
             self.home_lift,
             self.home_arm,
@@ -350,7 +350,7 @@ class HelloRobot:
         # print(delta_translation)
         # print(rotation_delta_norm)
 
-        return translation_delta_norm < 0.01
+        return translation_delta_norm < 0.005 and rotation_delta_norm < 0.01
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         translation = [
@@ -398,6 +398,8 @@ class HelloRobot:
         while not reached:
             init_pose = self.getJointPos()
             reached = self.has_reached(ik_joints, gripper)
+            if reached:
+                time.sleep(0.4)
             time.sleep(0.05)
             if checks > MAX_RETRIES:
                 print("Failed to reach within 2cm of desired position")
