@@ -60,7 +60,7 @@ class D435ImagePublisher:
             port = self.port
         )
         self._seq = 0
-
+        print(connected_devices)
         try:
             d435i_serial = connected_devices["Intel RealSense D435I"]
         except KeyError:
