@@ -126,22 +126,22 @@ class D405ImagePublisher:
                 depth = np.ascontiguousarray(depth).astype(np.uint16)
                 resized_depth = cv2.resize(depth, RESIZED_DEPTH,  interpolation = cv2.INTER_NEAREST) 
                 depth_processed = (resized_depth * 0.0001).astype(np.float32)
-                if "DISPLAY" in os.environ:
-                    cv2.imshow("D405 Depth pre", resized_depth)
-                    cv2.imshow("D405", image)
+                # if "DISPLAY" in os.environ:
+                #     cv2.imshow("D405 Depth pre", resized_depth)
+                #     cv2.imshow("D405", image)
                 
                 self.rgb_publisher.pub_image_and_depth(image, depth_processed, time.time())
             else:
-                if "DISPLAY" in os.environ:
-                    cv2.imshow("D405", image)
+                # if "DISPLAY" in os.environ:
+                #     cv2.imshow("D405", image)
                 
                 self.rgb_publisher.pub_rgb_image(image, time.time())
 
             self._seq += 1
 
             # Stopping the camera
-            if cv2.waitKey(1) == 27:
-                break
+            # if cv2.waitKey(1) == 27:
+            #     break
             time.sleep(1 / D405_FPS)
             count += 1
 
