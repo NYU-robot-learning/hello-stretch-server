@@ -19,10 +19,10 @@ class TensorSubscriber(object):
             port=configs['action_port'],
             topic="params",
         )
-        self.zero_velocity_subscriber = ZMQKeypointSubscriber(
+        self.quit_subscriber = ZMQKeypointSubscriber(
             host=configs['remote'],
             port=configs['action_port'],
-            topic="zero",
+            topic="quit",
         )
         # create the ZMQ response socket for flag
         self.flag_socket = create_response_socket(host=configs['host'], port=configs['flag_port'])

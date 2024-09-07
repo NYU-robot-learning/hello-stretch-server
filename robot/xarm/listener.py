@@ -1,71 +1,70 @@
-from .tensor_subscriber_velocity import TensorSubscriber
-from .hello_robot_velocity import HelloRobot
-from .normalized_velocity_control import zero_vel
+from .tensor_subscriber import TensorSubscriber
+from .xarm import xArm
 
 import time
 import zmq
 from ..zmq_utils import *
     
 class Listener(ProcessInstantiator):
-    def __init__(self, host, hello_robot, gripper_safety_limits, translation_safety_limits, stream_during_motion, port_configs):
+    def __init__(self, xarm, port_configs):
         super().__init__()
-        self.hello_robot = hello_robot
-        self.gripper_safety_limits = gripper_safety_limits
-        self.translation_safety_limits = translation_safety_limits
-        self.stream_during_motion = stream_during_motion
-        self.host=host
+        self.xarm = xarm
         
         print("starting robot listner")
-        if self.hello_robot is None:
-            self.hello_robot = HelloRobot()
+        print(port_configs)
+        if self.xarm is None:
+            self.xarm = xArm(xarm_ip=port_configs["xarm_ip"])
 
-        self.hello_robot.home()
+        self.xarm.home()
         self.tensor_subscriber = TensorSubscriber(port_configs)
 
     # continue looping until instruction is given, then handle instruction
     def _wait_and_execute_action(self):
         while True:
+            # TODO check this sleep
+            time.sleep(0.005)
             robot_action = self.tensor_subscriber.robot_action_subscriber.recv_keypoints(flags=zmq.NOBLOCK) 
             if robot_action is not None:
                 print('received action')
-                self._handle_action("robot_action", robot_action)
+                print("Time at receiving action", time.time())
+                self._handle_action("robot_action", data=robot_action)
                 return
             home = self.tensor_subscriber.home_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
             if home is not None:
                 print('received home')
-                self._handle_action("home", home)
+                self._handle_action("home")
                 return
             home_params = self.tensor_subscriber.home_params_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
             if home_params is not None:
-                self._handle_action("home_params", home_params)
+                self._handle_action("home_params", data=home_params)
                 return
-            zero_velocity = self.tensor_subscriber.zero_velocity_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
-            if zero_velocity is not None:
-                self._handle_action("zero_velocity", zero_velocity)
+            quit = self.tensor_subscriber.quit_subscriber.recv_keypoints(flags=zmq.NOBLOCK)
+            if quit:
+                self._handle_action("quit")
                 return
 
-    def _handle_action(self, instruction, data):
+    def _handle_action(self, instruction, data=None):
         if instruction == "robot_action":
             self._execute_robot_action(data)
         elif instruction == "home":
-            self.hello_robot.home()
+            self.xarm.home()
         elif instruction == "home_params":
-            self.hello_robot.set_home_position(*data)
-        elif instruction == "zero_velocity":
-            self.hello_robot.controller.set_command(zero_vel)
+            self.xarm.move_relative(data)
+        elif instruction == "quit":
+            self.xarm.open_gripper()
+            self.xarm.gripper.disable()
+            quit()
     
     # execute the robot action given by policy
     def _execute_robot_action(self, action):
         print("Received action to execute at", time.time())
 
-        translation_tensor = action[:3]
-        rotational_tensor = action[3:6]
-        gripper_tensor = [action[-1]]
-        print('received robot action')
-        self.hello_robot.move_to_pose(
-            translation_tensor, rotational_tensor, gripper_tensor
+        relative_action = action[:-1]
+        gripper = action[-1]
+        
+        self.xarm.move_to_pose(
+            relative_action, gripper
         )
-        # print(time.time())
     
     # wait for flag to before waiting for action
     def _wait_for_flag(self):
