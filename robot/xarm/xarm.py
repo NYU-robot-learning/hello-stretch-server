@@ -5,11 +5,6 @@ import time
 from robot.utils import create_transform, transform_to_vec
 from robot.xarm.gripper import Gripper
 
-# HOME_POS = [241.504044, 14.53646, 464.727356, -21.489011, -87.75244, -156.007298]
-# HOME_POS = [268.259674, 14.537166, 378.942078, -32.851796, -88.226333, -144.201158]
-# HOME_POS = [265.04303, 5.275682, 418.980225, -36.629879, -88.254637, -142.362136] # AMERICAN EAGLE BAG
-# HOME_POS = [253.502518, -4.968012, 448.332031, -52.248251, -87.475988, -128.140349] # JOURNEYS
-# HOME_POS = [307.176697, -6.834308, 449.591614, -27.628254, -87.905591, -152.663917] # HOLLISTER and QDOBA
 HOME_POS = [284.008911, -18.132006, 484.083954, -27.36647, -87.102247, -155.131474]
 END_EFFECTOR_TO_IPHONE = [125,0,95,0,-15,0]
 GRIPPER_OPEN = 3100
@@ -81,10 +76,8 @@ class xArm:
             
             self.arm.set_position(*new_pos, speed=100, mvacc=1000, wait=True)
             
-            # time.sleep(1/5)
-            
-            if gripper < 0.9 and not self.gripper_has_moved:
+            if gripper < 0.5 and not self.gripper_has_moved:
                 self.gripper.move_to_pos(800)
                 self.gripper_has_moved = True  
-            # elif gripper > 0.6 and self.gripper_has_moved:
-            #     self.gripper.move_to_pos(GRIPPER_OPEN)
+            elif gripper > 0.9 and self.gripper_has_moved:
+                self.gripper.move_to_pos(GRIPPER_OPEN)
