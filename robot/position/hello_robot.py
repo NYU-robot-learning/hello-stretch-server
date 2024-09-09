@@ -438,24 +438,7 @@ class HelloRobot:
 
         self.move_to_joints(ik_joints, gripper)
 
-        reached = False
-        checks = 0
-        while not reached:
-            init_pose = self.getJointPos()
-            reached = self.has_reached(ik_joints, gripper)
-            if reached:
-                time.sleep(0.3)
-            time.sleep(0.05)
-            if checks > MAX_RETRIES:
-                print("Failed to reach within 2cm of desired position")
-                break
-            if checks > MAX_RETRIES/3:
-                curr_pose = self.getJointPos()
-                if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
-                    break
-
-            checks += 1
-        # time.sleep(0.3)
+        time.sleep(0.5)
 
         self.updateJoints()
         for joint_index in range(self.joint_array.rows()):
