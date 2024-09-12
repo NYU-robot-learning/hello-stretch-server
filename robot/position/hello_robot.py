@@ -19,8 +19,8 @@ pouring = [33, 19, 53]
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
 STRETCH_GRIPPER_MAX = 150
-HOME_POS = 0.74
-ROTATION_VEL = 1
+HOME_POS = 0.5
+ROTATION_VEL = 0.05
 
 class HelloRobot:
     def __init__(
@@ -29,10 +29,10 @@ class HelloRobot:
         gripper_threshold=7, # unused
         stretch_gripper_max=STRETCH_GRIPPER_MAX,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-5],
-        sticky_gripper=False,
+        stretch_gripper_tight=[-20],
+        sticky_gripper=True,
         # Below the first value, it will close, above the second value it will open
-        gripper_threshold_post_grasp_list=[0.75*STRETCH_GRIPPER_MAX, 0.05*STRETCH_GRIPPER_MAX],
+        gripper_threshold_post_grasp_list=[0.8*STRETCH_GRIPPER_MAX, 0.08*STRETCH_GRIPPER_MAX],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -364,11 +364,7 @@ class HelloRobot:
         print(translation_delta_norm)
         print(rotation_delta_norm)
 
-        # print(translation_delta_norm)
-        # print(delta_translation)
-        # print(rotation_delta_norm)
-
-        return translation_delta_norm < 0.04 and rotation_delta_norm < 0.04
+        return translation_delta_norm < 0.02 and rotation_delta_norm < 0.02
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
         if self.threshold_count == 2:
@@ -417,23 +413,22 @@ class HelloRobot:
         reached = False
         checks = 0
 
-        init_pose = self.getJointPos()
-        while not reached:
-            reached = self.has_reached(ik_joints, gripper)
-            print(reached)
-            if reached:
-                time.sleep(1)
-            time.sleep(0.05)
-            if checks > MAX_RETRIES:
-                print("Failed to reach within 2cm of desired position")
-                break
-            if checks > MAX_RETRIES/3:
-                curr_pose = self.getJointPos()
-                if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
-                    break
+        # init_pose = self.getJointPos()
+        # while not reached:
+        #     reached = self.has_reached(ik_joints, gripper)
+        #     print(reached)
+        #     if reached:
+        #         time.sleep(0.3)
+        #     time.sleep(0.05)
+        #     if checks > 25:
+        #         print("Failed to reach within 2cm of desired position")
+        #         break
+        #     if checks > MAX_RETRIES/3:
+        #         curr_pose = self.getJointPos()
+        #         if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
+        #             break
 
-            checks += 1
-        # time.sleep(0.3)
+        #     checks += 1
 
         self.updateJoints()
         for joint_index in range(self.joint_array.rows()):
