@@ -19,8 +19,8 @@ pouring = [33, 19, 53]
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
 STRETCH_GRIPPER_MAX = 150
-HOME_POS = 0.5
-ROTATION_VEL = 0.05
+HOME_POS = 0.8
+ROTATION_VEL = 1
 
 class HelloRobot:
     def __init__(
