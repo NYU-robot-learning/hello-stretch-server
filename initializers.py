@@ -31,10 +31,11 @@ class StartServer(ProcessInstantiator):
             ))
 
     def _init_robot_process(self):
-        self.processes.append(Process(
-            target = self._start_component,
-            args = (self.configs.controller, )
-        ))
+        if self.configs.get("controller"):
+            self.processes.append(Process(
+                target = self._start_component,
+                args = (self.configs.controller, )
+            ))
 
 class StickTeleop(ProcessInstantiator):
     """
