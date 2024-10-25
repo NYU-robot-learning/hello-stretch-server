@@ -19,7 +19,7 @@ pouring = [33, 19, 53]
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
 STRETCH_GRIPPER_MAX = 150
-HOME_POS = 0.8
+HOME_POS = 0.7
 ROTATION_VEL = 1
 
 class HelloRobot:
@@ -113,7 +113,7 @@ class HelloRobot:
         OVERRIDE_STATES["wrist_pitch"] = PITCH_VAL
         self.robot.end_of_arm.move_to("wrist_roll", wrist_roll)
 
-        self.robot.lift.move_to(self.robot.lift.status["pos"] + 0.15)
+        # self.robot.lift.move_to(self.robot.lift.status["pos"])
         self.robot.push_command()
 
         while (
@@ -367,69 +367,102 @@ class HelloRobot:
         return translation_delta_norm < 0.02 and rotation_delta_norm < 0.02
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
-        if self.threshold_count == 2:
-            time.sleep(2)
-            return
-        translation = [
-            translation_tensor[0],
-            translation_tensor[1],
-            translation_tensor[2],
-        ]
-        rotation = rotational_tensor
+        print(translation_tensor, rotational_tensor, gripper)
+        # arm_action, base_action, lift_action = translation_tensor
+        # self.robot.base.translate_by(-1*base_action)
+        # self.robot.lift.move_by(lift_action)
+        # self.robot.arm.move_by(-1*arm_action)
+        # self.robot.end_of_arm.move_to("wrist_roll", -1.57)
+        # self.robot.push_command()
+        # time.sleep(3)
+        # self.robot.end_of_arm.move_to("stretch_gripper", -40)
+        # time.sleep(2)
+        # self.robot.arm.move_by(-0.20)
+        # self.robot.push_command()
+        # time.sleep(2)
+        # self.home()
 
-        # move logic
-        self.updateJoints()
+        arm_action, base_action, lift_action = translation_tensor
+        self.robot.base.translate_by(-1*base_action)
+        self.robot.lift.move_by(lift_action)
+        self.robot.arm.move_by(-1*arm_action+0.04)
+        # self.robot.end_of_arm.move_to("wrist_roll", -1.57)
+        self.robot.push_command()
+        time.sleep(3)
+        self.robot.end_of_arm.move_to("stretch_gripper", -25)
+        time.sleep(2)
+        self.robot.lift.move_by(0.15)
+        self.robot.push_command()
+        time.sleep(2)
+        # self.home()
 
-        for joint_index in range(self.joint_array.rows()):
-            self.joint_array[joint_index] = self.joints[self.joint_list[joint_index]]
+        # arm positive back
+        # base positive right
+        # lift positive up
+        # pass
+        # if self.threshold_count == 2:
+        #     time.sleep(2)
+        #     return
+        # translation = [
+        #     translation_tensor[0],
+        #     translation_tensor[1],
+        #     translation_tensor[2],
+        # ]
+        # rotation = rotational_tensor
 
-        curr_pose = PyKDL.Frame()
-        del_pose = PyKDL.Frame()
-        self.fk_p_kdl.JntToCart(self.joint_array, curr_pose)
+        # # move logic
+        # self.updateJoints()
 
-        rot_matrix = R.from_euler("xyz", rotation, degrees=False).as_matrix()
+        # for joint_index in range(self.joint_array.rows()):
+        #     self.joint_array[joint_index] = self.joints[self.joint_list[joint_index]]
 
-        # new code from here
-        del_rot = PyKDL.Rotation(
-            PyKDL.Vector(rot_matrix[0][0], rot_matrix[1][0], rot_matrix[2][0]),
-            PyKDL.Vector(rot_matrix[0][1], rot_matrix[1][1], rot_matrix[2][1]),
-            PyKDL.Vector(rot_matrix[0][2], rot_matrix[1][2], rot_matrix[2][2]),
-        )
-        del_trans = PyKDL.Vector(translation[0], translation[1], translation[2])
-        del_pose.M = del_rot
-        del_pose.p = del_trans
-        goal_pose_new = curr_pose * del_pose
+        # curr_pose = PyKDL.Frame()
+        # del_pose = PyKDL.Frame()
+        # self.fk_p_kdl.JntToCart(self.joint_array, curr_pose)
 
-        seed_array = PyKDL.JntArray(self.arm_chain.getNrOfJoints())
-        self.ik_p_kdl.CartToJnt(seed_array, goal_pose_new, self.joint_array)
+        # rot_matrix = R.from_euler("xyz", rotation, degrees=False).as_matrix()
 
-        ik_joints = {}
+        # # new code from here
+        # del_rot = PyKDL.Rotation(
+        #     PyKDL.Vector(rot_matrix[0][0], rot_matrix[1][0], rot_matrix[2][0]),
+        #     PyKDL.Vector(rot_matrix[0][1], rot_matrix[1][1], rot_matrix[2][1]),
+        #     PyKDL.Vector(rot_matrix[0][2], rot_matrix[1][2], rot_matrix[2][2]),
+        # )
+        # del_trans = PyKDL.Vector(translation[0], translation[1], translation[2])
+        # del_pose.M = del_rot
+        # del_pose.p = del_trans
+        # goal_pose_new = curr_pose * del_pose
 
-        for joint_index in range(self.joint_array.rows()):
-            ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
+        # seed_array = PyKDL.JntArray(self.arm_chain.getNrOfJoints())
+        # self.ik_p_kdl.CartToJnt(seed_array, goal_pose_new, self.joint_array)
 
-        self.move_to_joints(ik_joints, gripper)
+        # ik_joints = {}
 
-        reached = False
-        checks = 0
+        # for joint_index in range(self.joint_array.rows()):
+        #     ik_joints[self.joint_list[joint_index]] = self.joint_array[joint_index]
 
-        # init_pose = self.getJointPos()
-        # while not reached:
-        #     reached = self.has_reached(ik_joints, gripper)
-        #     print(reached)
-        #     if reached:
-        #         time.sleep(0.3)
-        #     time.sleep(0.05)
-        #     if checks > 25:
-        #         print("Failed to reach within 2cm of desired position")
-        #         break
-        #     if checks > MAX_RETRIES/3:
-        #         curr_pose = self.getJointPos()
-        #         if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
-        #             break
+        # self.move_to_joints(ik_joints, gripper)
 
-        #     checks += 1
+        # reached = False
+        # checks = 0
 
-        self.updateJoints()
-        for joint_index in range(self.joint_array.rows()):
-            self.joint_array[joint_index] = self.joints[self.joint_list[joint_index]]
+        # # init_pose = self.getJointPos()
+        # # while not reached:
+        # #     reached = self.has_reached(ik_joints, gripper)
+        # #     print(reached)
+        # #     if reached:
+        # #         time.sleep(0.3)
+        # #     time.sleep(0.05)
+        # #     if checks > 25:
+        # #         print("Failed to reach within 2cm of desired position")
+        # #         break
+        # #     if checks > MAX_RETRIES/3:
+        # #         curr_pose = self.getJointPos()
+        # #         if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
+        # #             break
+
+        # #     checks += 1
+
+        # self.updateJoints()
+        # for joint_index in range(self.joint_array.rows()):
+        #     self.joint_array[joint_index] = self.joints[self.joint_list[joint_index]]

@@ -2,8 +2,8 @@
 # remote_address: 100.96.11.47
 
 # Local host
-host_address: 100.106.134.29 # 2001
-remote_address: 100.96.11.47 # lambda-pluto
+host_address: 10.19.140.127 # 2001
+remote_address: 172.24.71.211 # lambda-pluto
 
 # Diffusion
 # host_address: 100.106.134.29 # 2001
