@@ -18,21 +18,21 @@ pouring = [33, 19, 53]
 
 OVERRIDE_STATES = {}
 MAX_RETRIES = 50
-STRETCH_GRIPPER_MAX = 150
-HOME_POS = 0.8
-ROTATION_VEL = 1
+STRETCH_GRIPPER_MAX = 100
+HOME_POS = 0.4
+ROTATION_VEL = 0.3
 
 class HelloRobot:
     def __init__(
         self,
-        urdf_file="stretch_nobase_raised.urdf",
+        urdf_file="stretch_nobase_raised_se3.urdf",
         gripper_threshold=7, # unused
         stretch_gripper_max=STRETCH_GRIPPER_MAX,
         stretch_gripper_min=0,
-        stretch_gripper_tight=[-20],
+        stretch_gripper_tight=[-25],
         sticky_gripper=True,
         # Below the first value, it will close, above the second value it will open
-        gripper_threshold_post_grasp_list=[0.8*STRETCH_GRIPPER_MAX, 0.08*STRETCH_GRIPPER_MAX],
+        gripper_threshold_post_grasp_list=[0.5*STRETCH_GRIPPER_MAX, 0.2*STRETCH_GRIPPER_MAX],
     ):
         self.STRETCH_GRIPPER_MAX = stretch_gripper_max
         self.STRETCH_GRIPPER_MIN = stretch_gripper_min
@@ -113,7 +113,8 @@ class HelloRobot:
         OVERRIDE_STATES["wrist_pitch"] = PITCH_VAL
         self.robot.end_of_arm.move_to("wrist_roll", wrist_roll)
 
-        self.robot.lift.move_to(self.robot.lift.status["pos"] + 0.15)
+        self.robot.lift.move_to(lift_pos)
+        self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
         self.robot.push_command()
 
         while (
@@ -123,10 +124,6 @@ class HelloRobot:
             # print(self.robot.get_status()['arm']['pos'])
             self.robot.arm.move_to(arm_pos)
             self.robot.push_command()
-
-        self.robot.lift.move_to(lift_pos)
-        self.robot.end_of_arm.move_to("stretch_gripper", self.CURRENT_STATE)
-        self.robot.push_command()
         
         self.robot.head.move_to('head_pan', -1.74)
         head_tilt = self.head_cam_tilt(lift_pos, arm_pos)
@@ -171,22 +168,17 @@ class HelloRobot:
         self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_MAX)
         if self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"] < 0.9:
             time.sleep(2)
+        # while (
+        #     self.robot.get_status()["arm"]["pos"] > self.home_arm + 0.002
+        #     or self.robot.get_status()["arm"]["pos"] < self.home_arm - 0.002
+        # ):
+        #     # print(self.robot.get_status()['arm']['pos'])
+        #     self.robot.arm.move_to(self.home_arm)
+        #     self.robot.push_command()
         self.move_to_position(
             self.home_lift,
             self.home_arm,
             self.home_base,
-            self.home_wrist_yaw,
-            self.home_wrist_pitch,
-            self.home_wrist_roll,
-            self.home_gripper,
-        )
-    
-    def task_reset(self):
-        self.robot.end_of_arm.move_to("stretch_gripper", self.STRETCH_GRIPPER_MAX)
-        self.move_to_position(
-            self.home_lift,
-            self.home_arm,
-            0,
             self.home_wrist_yaw,
             self.home_wrist_pitch,
             self.home_wrist_roll,
@@ -327,8 +319,7 @@ class HelloRobot:
         
         self.gripper_change = 0
         if self.threshold_count == 2:
-            self.task_reset()
-            time.sleep(5)
+            self.home()
 
     def getGripperState(self):
         return self.robot.end_of_arm.status["stretch_gripper"]["pos_pct"]
@@ -361,21 +352,21 @@ class HelloRobot:
 
         translation_delta_norm = np.linalg.norm(delta_translation)
         rotation_delta_norm = np.linalg.norm(delta_rotation)
-        print(translation_delta_norm)
-        print(rotation_delta_norm)
 
-        return translation_delta_norm < 0.02 and rotation_delta_norm < 0.02
+        # print(translation_delta_norm)
+        # print(delta_translation)
+        # print(rotation_delta_norm)
+
+        return translation_delta_norm < 0.02 and rotation_delta_norm < 0.01
 
     def move_to_pose(self, translation_tensor, rotational_tensor, gripper):
-        if self.threshold_count == 2:
-            time.sleep(2)
-            return
         translation = [
             translation_tensor[0],
             translation_tensor[1],
             translation_tensor[2],
         ]
         rotation = rotational_tensor
+        print(rotational_tensor)
 
         # move logic
         self.updateJoints()
@@ -412,23 +403,25 @@ class HelloRobot:
 
         reached = False
         checks = 0
-
-        # init_pose = self.getJointPos()
+        init_pose = self.getJointPos()
         # while not reached:
+        #     if checks % 5 == 0:
+        #         init_pose = self.getJointPos()
         #     reached = self.has_reached(ik_joints, gripper)
-        #     print(reached)
         #     if reached:
-        #         time.sleep(0.3)
+        #         time.sleep(0.05)
+        #         break
         #     time.sleep(0.05)
-        #     if checks > 25:
+        #     if checks > 35:
         #         print("Failed to reach within 2cm of desired position")
         #         break
         #     if checks > MAX_RETRIES/3:
         #         curr_pose = self.getJointPos()
-        #         if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.01:
+        #         if np.linalg.norm(init_pose[[0,2,3,4,5]] - curr_pose[[0,2,3,4,5]]) < 0.015:
         #             break
 
         #     checks += 1
+        # time.sleep(0.3)
 
         self.updateJoints()
         for joint_index in range(self.joint_array.rows()):
