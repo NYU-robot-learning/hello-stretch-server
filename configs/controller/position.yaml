@@ -9,3 +9,5 @@ port_configs:
   remote: ${network.remote_address}
   action_port: ${network.action_port}
   flag_port: ${network.flag_port}
+task: ${task}
+retry: ${retry}

@@ -7,6 +7,8 @@ defaults:
   - override hydra/job_logging: disabled
 
 use_depth: False
+task: drawer
+retry: False
 
 hydra:  
   output_subdir: null  
